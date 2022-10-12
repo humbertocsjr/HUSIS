@@ -5,19 +5,24 @@ This Operating System will implements minimum DOS INT 0x21 function set to run [
 ## Minimum Requiriments
 
 IBM PC or Compatible
+
 Floppy Disk
+
 EGA/VGA Video Card (MDA/CGA Partial Support, in implementation)
+
 128 KiB RAM
 
 ## How to use
 
 You can run as Standalone Operating System or DOS Application.
 
+
 The DOS Application mode preserves DOS Structures, and limit the RAM usage to area on MCB (DOS Memory Control Block).
 
 #### DOS App mode
 
 This mode is created for Debug use and running on machines with ROM DOS, like HP Palmtop PC 95LX/100LX/200LX.
+
 
 Run 'HUSIS.COM'
 
@@ -38,20 +43,25 @@ Use MAKE.BAT command to build
 
 Use 'make' command to build.
 
+
 Use 'make img' to generate standalone floppy image (Use SUDO to mount image)
 
+
 Use 'make test' to generate standalone floppy image and run on DOSBOX(Standalone Mode)
+
 
 Use 'make testdos' run on DOSBOX(DOS Mode)
 
 ## Objectives
 
 ### MinixFS Bootloader
+
 - [x] Convert my bootloader to run HUSIS Kernel based on T3X/86
 - [ ] Convert Assembly code from Old-School Assembler to S86
 - [ ] Translate the code from Portuguese to English
 
 ### HUSIS Kernel
+
 - [ ] Memory management - DOS Mode using limits on MCB
 - [ ] Memory management - Standalone Mode
 - [x] Stream I/O Infrastructure
@@ -67,6 +77,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [ ] Multitask for background drivers
 
 ### DOS API
+
 - [x] Implement Standard Output INT 0x21 AH 0x40 BX 1
 - [x] Implement Standard Error Output INT 0x21 AH 0x40 BX 2
 - [x] Implement Standard Input
@@ -84,16 +95,19 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 
 ### HUSIS API - Used by Applications
+
 - [ ] Stream Implementation API
 - [ ] File System Implementation API
 
 ### Drivers
+
 - [ ] FAT12/16 File System Driver
 - [ ] NE2000 Packet Driver
 - [ ] IPX Protocol Stack
 - [ ] Unified Text User Interface Driver
 
 ### Applications
+
 - [ ] Command Prompt
 - [ ] Text Editor
 - [ ] BASIC Interpreter
