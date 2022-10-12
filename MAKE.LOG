@@ -1,0 +1,17 @@
+-= Build HUSIS =-
+-= Boot Loader for 360 KiB Floppy =-
+Old-School Assembler para BIOS v1.17 [PT-BR]
+ Copyright (c) 1991-2011, Venkat Iyer
+ Copyright (c) 2019-2022, Humberto Costa dos Santos Junior
+
+ Incluindo arquivo BOOT.S
+-= Boot Loader for 1440 KiB Floppy =-
+Old-School Assembler para BIOS v1.17 [PT-BR]
+ Copyright (c) 1991-2011, Venkat Iyer
+ Copyright (c) 2019-2022, Humberto Costa dos Santos Junior
+
+ Incluindo arquivo BOOT.S
+-= Shell =-
+Text = 1276, Data = 622, Symbols = 39, Nlist = 358, Labels = 0
+-= HUSIS Kernel =-
+Text = 13322, Data = 1616, Symbols = 193, Nlist = 2182, Labels = 289
