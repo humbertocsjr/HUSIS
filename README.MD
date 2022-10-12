@@ -118,7 +118,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [ ] BASIC Interpreter
 - [ ] Custom T3X/86 with PRG Support (Minimal RAM usage, fixed 2 KiB Stack)
 
-# History in images
+# Milestones in images
 
 First use of Bootloader: (86Box Emulator with Xi8088 machine with 128 KiB)
 
@@ -134,6 +134,6 @@ HUSIS v0.1 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 
 HUSIS v0.2 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
 
-- Implemented Memory Manager
+- Memory Manager implemented
 
 ![alt first version](SCREENS/V0_2_0.PNG)
