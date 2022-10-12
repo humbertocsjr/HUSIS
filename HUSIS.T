@@ -888,6 +888,7 @@ do
     ! Initialize
     term_init();
     disk_init();
+    fs_init();
 
     ! HUSIS Banner using DOS API implemented by HUSIS
     t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v0.1\ef07 [RAM: ");
