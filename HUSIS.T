@@ -27,9 +27,9 @@ const MODE_DOS_APP = 2;  ! Running as DOS App
 ! DOS delimited RAM space by MCB (DOS Memory Control Block).
 
 
-!
+! ==========================================================================
 ! String/Character
-!
+! ==========================================================================
 
 char_is_num(c) return (c >= '0') & (c <= '9');
 char_is_upper(c) return (c >= 'A') & (c <= 'Z');
@@ -104,9 +104,9 @@ end
 rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! Convert remote string to number
 
-!
+! ==========================================================================
 ! Generic functions
-!
+! ==========================================================================
 
 t.writes(file, str) t.write(file, str, str_len(str));
 ! Write string to file
@@ -138,9 +138,9 @@ t.writenum(file, value) do
     t.writec(file, tmp + '0'); 
 end
 
-!
+! ==========================================================================
 ! I/O STREAM (Generic API)
-!
+! ==========================================================================
 
 const STATUS_UNKNOWN = 0;
 const STATUS_OPEN = 1;
@@ -325,9 +325,9 @@ stream_write_hex(stream, value) do
     else stream_write_char(stream, tmp + 'a' - 10);
 end
 
-!
+! ==========================================================================
 ! Terminal I/O using Stream API
-!
+! ==========================================================================
 struct COLORS = BLACK, DARK_BLUE, DARK_GREEN, DARK_CYAN, DARK_RED,
                 DARK_MAGENTA, BROWN, DARK_GRAY, LIGHT_GRAY,
                 LIGHT_BLUE, LIGHT_GREEN, LIGHT_CYAN, LIGHT_RED, LIGHT_MAGENTA, 
@@ -348,7 +348,10 @@ term_cls(stream) do
     stream[TERM_X] := 0;
     stream[STREAM_PTR_BUFFER] := 0;
     for(i=0,25*80) do
-        t.farsetw(stream[STREAM_SEG_BUFFER], i<<1, ' ' | (stream[TERM_COLORS] << 8));
+        t.farsetw(
+            stream[STREAM_SEG_BUFFER], 
+            i<<1, 
+            ' ' | (stream[TERM_COLORS] << 8));
     end
 end
 
@@ -420,16 +423,22 @@ term_write_char(stream, c) do
             stream[TERM_CMD_POS] := 0;
             if(\char_is_num(c)) return;
             stream[TERM_VALUE] := (c - '0') + stream[TERM_VALUE];
-            ie(stream[TERM_CMD] = 'x') term_calc_pos(stream, stream[TERM_VALUE], stream[TERM_Y]);
-            else ie(stream[TERM_CMD] = 'y') term_calc_pos(stream, stream[TERM_X], stream[TERM_VALUE]);
-            else ie(stream[TERM_CMD] = 'r') stream[TERM_CMD_POS] := 4;
-            else ie(stream[TERM_CMD] = 'f') term_color_front(stream, stream[TERM_VALUE]);
-            else ie(stream[TERM_CMD] = 'b') term_color_back(stream, stream[TERM_VALUE]);
+            ie(stream[TERM_CMD] = 'x') 
+                term_calc_pos(stream, stream[TERM_VALUE], stream[TERM_Y]);
+            else ie(stream[TERM_CMD] = 'y') 
+                term_calc_pos(stream, stream[TERM_X], stream[TERM_VALUE]);
+            else ie(stream[TERM_CMD] = 'r') 
+                stream[TERM_CMD_POS] := 4;
+            else ie(stream[TERM_CMD] = 'f') 
+                term_color_front(stream, stream[TERM_VALUE]);
+            else ie(stream[TERM_CMD] = 'b') 
+                term_color_back(stream, stream[TERM_VALUE]);
             else stream[TERM_CMD_POS] := 0;
         end
         else ie(stream[TERM_CMD_POS] = 4) do
             stream[TERM_CMD_POS] := 0;
-            if(stream[TERM_CMD] = 'r') for(i=0,stream[TERM_VALUE]) term_write_char(stream, c);
+            if(stream[TERM_CMD] = 'r') 
+                for(i=0,stream[TERM_VALUE]) term_write_char(stream, c);
         end
         else stream[TERM_CMD_POS] := 0;
         return;
@@ -452,7 +461,10 @@ term_write_char(stream, c) do
     if(c = 9) do
         c := ' ';
     end
-    t.farsetw(stream[STREAM_SEG_BUFFER], stream[STREAM_PTR_BUFFER], c | stream[TERM_COLORS]);
+    t.farsetw(
+            stream[STREAM_SEG_BUFFER], 
+            stream[STREAM_PTR_BUFFER], 
+            c | stream[TERM_COLORS]);
     stream[STREAM_PTR_BUFFER] := stream[STREAM_PTR_BUFFER] + 2;
     stream[TERM_X] := stream[TERM_X] + 1;
     if(stream[TERM_X] > 79) do
@@ -554,9 +566,9 @@ term_init() do
     StreamErr := StreamIO;
 end
 
-!
+! ==========================================================================
 ! File System Infrastructure
-!
+! ==========================================================================
 
 const TOTAL_FS = 16;
 
@@ -751,9 +763,9 @@ mem_usable_kib() do
     return mem_total_kib() - ((t.local() >> 6) & 0x7fff) - 64;
 end
 
-!
+! ==========================================================================
 ! Minix File System
-!
+! ==========================================================================
 
 minixfs_read_zone(disk, position, dest) do
 ! Read zones (1024 bytes disk block) using 512 bytes physical blocks
@@ -776,9 +788,9 @@ minixfs_mount(disk) do
 end
 
 
-!
+! ==========================================================================
 ! Interrupt Handlers
-!
+! ==========================================================================
 
 int_set(ptr_ant, int, funcao) do
 ! Set new Interrupt Handler, store previous handler to restore
@@ -855,9 +867,9 @@ int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
     else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
 end
 
-!
+! ==========================================================================
 ! Main
-!
+! ==========================================================================
 
 var Int79Ant[T3X.PTRSIZE], Int20Ant[T3X.PTRSIZE], Int21Ant[T3X.PTRSIZE];
 ! Previous Interrupt Handlers
@@ -918,7 +930,8 @@ do
     t.writes(T3X.SYSOUT, " [Application RAM: ");
     t.writenum(T3X.SYSOUT, mem_usable_kib());
     t.writeln(T3X.SYSOUT, " KiB]");
-    t.writeln(T3X.SYSOUT, "Copyright (c) 2022, Humberto Costa dos Santos Junior");
+    t.writeln(T3X.SYSOUT, 
+        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
     t.writeln(T3X.SYSOUT, "Build using \ef03T3X/86\ef07 Compiler");
     t.writeln(T3X.SYSOUT, "License: 3-Clause BSD");
     if(Mode = MODE_DOS_APP) t.writeln(T3X.SYSERR, "DOS Application Mode");
