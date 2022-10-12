@@ -748,11 +748,21 @@ end
 ! Memory Manager
 ! ==========================================================================
 
+const MCB_TYPE_B = 0;
+const MCB_PROCESS_W = 1;
+const MCB_PARAGRAPHS_W = 3;
+const MCB_NAME_STR = 8;
+
+var MemFirstSegment;
+
 mem_total_kib() do
 ! Get total accessible ram size
     if(Mode = MODE_DOS_APP) do
-        ! Get allocated paras(16 bytes block) + Local segment / 64
-        return ((t.fargetw(t.local()-1, 3) + t.local()) >> 6) & 0x7fff;
+        ! (Get MCB allocated paras(16 bytes block) + Local segment) / 64
+        return (
+                (t.fargetw(t.local()-1, MCB_PARAGRAPHS_W) + 
+                t.local()) >> 6
+            ) & 0x7fff;
     end
     return t.int86ax(0x12,0,0,0,0,0,0);
 end
@@ -761,6 +771,160 @@ mem_usable_kib() do
 ! Get usable ram size
     ! Total - (Kernel position) - (Kernel Size)
     return mem_total_kib() - ((t.local() >> 6) & 0x7fff) - 64;
+end
+
+mem_init() do
+! Initialize application memory with first MCB (Use same format of DOS)
+    MemFirstSegment := t.local() + 4096;
+    t.farsetb(MemFirstSegment, MCB_TYPE_B, 'Z'); 
+        ! M = Commom Block, Z = Last Block
+    t.farsetw(MemFirstSegment, MCB_PROCESS_W, 0); 
+        ! Process ID (Segment)
+    t.farsetw(MemFirstSegment, MCB_PARAGRAPHS_W, (mem_usable_kib() << 6) - 1); 
+        ! Block Size
+    t.farsetb(MemFirstSegment, MCB_NAME_STR, 0); ! Name ASCIZ
+end
+
+mem_find(initial_seg, process) do
+! Find first segment from process
+    var seg, eol;
+    eol := false;
+    seg := initial_seg;
+    while(\eol) do
+        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
+        if(t.fargetw(seg, MCB_PROCESS_W) = process) do
+            return seg;
+        end
+        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
+    end
+    return 0;
+end
+
+mem_find_next(initial_seg, process) do
+! Find next segment from process
+    if(t.fargetw(initial_seg, MCB_TYPE_B) = 'Z') return 0;
+    return mem_find(
+            1 + initial_seg + t.fargetw(initial_seg, MCB_PARAGRAPHS_W), 
+            process
+        );
+end
+
+mem_defrag() do
+! Find and merge free blocks
+    var seg, prev_seg, eol;
+    if(t.fargetb(seg, MCB_TYPE_B) = 'Z') return;
+    prev_seg := MemFirstSegment;
+    seg := t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + prev_seg + 1;
+    eol := false;
+    while(\eol) do
+        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
+        if
+        (
+            (t.fargetw(seg, MCB_PROCESS_W) = 0) &
+            (t.fargetw(prev_seg, MCB_PROCESS_W) = 0)
+        ) 
+        do
+            t.farsetw
+            (
+                prev_seg, 
+                MCB_PARAGRAPHS_W, 
+                t.fargetw(seg, MCB_PARAGRAPHS_W) + 
+                t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + 1
+            );
+            t.farsetb
+            (
+                prev_seg,
+                MCB_TYPE_B,
+                t.fargetb(seg, MCB_TYPE_B)
+            );
+            t.farsetw(seg, MCB_PROCESS_W, 0xffff);
+        end
+        if(t.fargetw(seg, MCB_PROCESS_W) \= 0) prev_seg := seg;
+        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
+    end
+end
+
+mem_size(seg) do
+! Return size of allocated block in paras
+    return t.fargetw(seg - 1, MCB_PARAGRAPHS_W);
+end
+
+mem_alloc(process, paras) do
+! Allocate block in application memory (1 para. = 16 Bytes)
+! Return 0 if fails
+    var seg, next_seg, size;
+    if((paras < 0) | (paras > 8192)) return 0; ! More than 128 KiB
+    seg := mem_find(MemFirstSegment, 0);
+    while(seg \= 0) do
+        size := mem_size(seg + 1);
+        if((size >= paras) | size < 0) leave;
+        seg := mem_find_next(seg, 0);
+    end
+    if(seg = 0) return 0;
+    size := t.fargetb(seg, MCB_PARAGRAPHS_W);
+    if
+        (
+            ((size + 5) > paras) |
+            (size < 0) ! More than integer limit
+        )
+    do
+        next_seg := seg + 1 + paras;
+        size := size - paras - 1;
+        t.farsetb(next_seg, MCB_TYPE_B, t.fargetb(seg, MCB_TYPE_B));
+        t.farsetb(seg, MCB_TYPE_B, 'M');
+        t.farsetw(next_seg, MCB_PROCESS_W, 0);
+        t.farsetw(next_seg, MCB_PARAGRAPHS_W, size);
+        t.farsetb(next_seg, MCB_NAME_STR, 0);
+        t.farsetw(seg, MCB_PARAGRAPHS_W, paras);
+    end
+    t.farsetw(seg, MCB_PROCESS_W, process);
+    return seg + 1;
+end
+
+mem_alloc_seg(process) do
+! Allocate full segment block (64 KiB)
+    return mem_alloc(process, 4096);
+end
+
+mem_free(seg) do
+! Free block of application memory
+    t.farsetw(seg - 1, MCB_PROCESS_W, 0);
+    mem_defrag();
+end
+
+mem_free_process(process) do
+! Free all blocks of one process
+    var seg, eol;
+    seg := MemFirstSegment;
+    eol := false;
+    while(\eol) do
+        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
+        if(t.fargetw(seg, MCB_PROCESS_W) = process) do
+            t.farsetw(seg, MCB_PROCESS_W, 0);
+        end
+        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
+    end
+    mem_defrag();
+end
+
+mem_calc_free() do
+! Return total free space
+    var total, seg, eol;
+    seg := MemFirstSegment;
+    eol := false;
+    total := 0;
+    while(\eol) do
+        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
+        if(t.fargetw(seg, MCB_PROCESS_W) = 0) do
+            total := total + t.fargetw(seg, MCB_PARAGRAPHS_W);
+        end
+        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
+    end
+    return total;
+end
+
+mem_calc_free_kib() do
+    return (mem_calc_free() >> 6) & 0x7fff;
 end
 
 ! ==========================================================================
@@ -900,7 +1064,7 @@ end
 do
 ! Main routine, initialize operating system
     var arg::15, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
-    var disk;
+    var disk, i;
     ! Replace INT 20(DOS API), 21(DOS API) and INT 79(HUSIS API)
     int_set(Int79Ant, 0x79, @int79);
     int_set(Int21Ant, 0x20, @int20);
@@ -913,6 +1077,7 @@ do
         Mode := MODE_DOS_APP;
 
     ! Initialize
+    mem_init();
     term_init();
     disk_init();
     fs_init();
@@ -928,7 +1093,7 @@ do
     t.writenum(T3X.SYSOUT, mem_total_kib());
     t.writes(T3X.SYSOUT, " KiB]");
     t.writes(T3X.SYSOUT, " [Application RAM: ");
-    t.writenum(T3X.SYSOUT, mem_usable_kib());
+    t.writenum(T3X.SYSOUT, mem_calc_free_kib());
     t.writeln(T3X.SYSOUT, " KiB]");
     t.writeln(T3X.SYSOUT, 
         "Copyright (c) 2022, Humberto Costa dos Santos Junior");
@@ -978,6 +1143,30 @@ do
         "Disk parameters incomplete. Use: DISK_ID CILINDERS HEADS SECTORS"
         );
     end
+
+! MEMORY MANAGER TEST
+    t.writeln(T3X.SYSOUT, "\n\rMEM ALLOC TEST");
+    for(i=1,12) do
+        t.writes(T3X.SYSOUT, "ALLOC ");
+        t.writenum(T3X.SYSOUT, i);
+        t.writes(T3X.SYSOUT, " PARAGRAPHS: SEG ");
+        t.writenum(T3X.SYSOUT, mem_alloc(1, i));
+        t.writeln(T3X.SYSOUT, "");
+    end
+    t.writeln(T3X.SYSOUT, "FREE ALL AND MERGE FREE BLOCKS");
+    mem_free_process(1);
+    t.writes(T3X.SYSOUT, "ALLOC ");
+    t.writenum(T3X.SYSOUT, 15);
+    t.writes(T3X.SYSOUT, " PARAGRAPHS: SEG ");
+    t.writenum(T3X.SYSOUT, mem_alloc(1, 15));
+    t.writeln(T3X.SYSOUT, "");
+    t.writes(T3X.SYSOUT, "ALLOC ");
+    t.writenum(T3X.SYSOUT, 40);
+    t.writes(T3X.SYSOUT, " PARAGRAPHS: SEG ");
+    t.writenum(T3X.SYSOUT, mem_alloc(1, 40));
+    t.writeln(T3X.SYSOUT, "");
+
+
 
     t.writes(T3X.SYSOUT, "\n\n\n\n\rPress ENTER to shutdown.");
     t.read(T3X.SYSIN, arg, 0);

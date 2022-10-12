@@ -71,8 +71,8 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 ### HUSIS Kernel
 
-- [ ] Memory management - DOS Mode using limits on MCB
-- [ ] Memory management - Standalone Mode
+- [x] Memory management - DOS Mode using limits on MCB
+- [x] Memory management - Standalone Mode
 - [x] Stream I/O Infrastructure
 - [x] Terminal I/O using Stream
 - [x] BIOS Disk I/O using Stream
