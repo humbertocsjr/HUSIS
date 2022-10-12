@@ -1,3 +1,6 @@
+| MinixFSv1 Bootloader
+| Humberto Costa dos Santos Junior, 2020-2022
+| 3-Clause BSD license
 jmps PreInicio
 .ascii "HC"
 SetoresPorTrilha:

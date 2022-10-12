@@ -7,6 +7,10 @@
 !  T3X/86 applications and Old-School Assembler without modifications.
 !
 
+const VERSION = 0;
+const SUB_VERSION = 2;
+const REVISION = 0;
+
 const TRUE = %1;
 const FALSE = 0;
 
@@ -902,12 +906,18 @@ do
     fs_init();
 
     ! HUSIS Banner using DOS API implemented by HUSIS
-    t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v0.1\ef07 [RAM: ");
+    t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v");
+    t.writenum(T3X.SYSOUT, VERSION);
+    t.writes(T3X.SYSOUT, ".");
+    t.writenum(T3X.SYSOUT, SUB_VERSION);
+    t.writes(T3X.SYSOUT, " R");
+    t.writenum(T3X.SYSOUT, REVISION);
+    t.writes(T3X.SYSOUT, "\ef07 [RAM: ");
     t.writenum(T3X.SYSOUT, mem_total_kib());
-    t.writeln(T3X.SYSOUT, " KiB]");
-    t.writes(T3X.SYSOUT, "Application RAM: ");
+    t.writes(T3X.SYSOUT, " KiB]");
+    t.writes(T3X.SYSOUT, " [Application RAM: ");
     t.writenum(T3X.SYSOUT, mem_usable_kib());
-    t.writeln(T3X.SYSOUT, " KiB");
+    t.writeln(T3X.SYSOUT, " KiB]");
     t.writeln(T3X.SYSOUT, "Copyright (c) 2022, Humberto Costa dos Santos Junior");
     t.writeln(T3X.SYSOUT, "Build using \ef03T3X/86\ef07 Compiler");
     t.writeln(T3X.SYSOUT, "License: 3-Clause BSD");
