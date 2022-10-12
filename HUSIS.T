@@ -1054,7 +1054,7 @@ end
 fatal_error(msg) do
 ! Display fatal error and shutdown (My own 'blue screen of death' =) )
     var tmp::1;
-    t.writes(T3X.SYSERR, "\r\nFATAL ERROR: ");
+    t.writes(T3X.SYSERR, "\ex00\ey24FATAL ERROR: ");
     t.writeln(T3X.SYSERR, msg);
     t.writes(T3X.SYSERR, "\r\nPress ENTER to shutdown.\r\n");
     t.read(T3X.SYSIN, tmp, 0);
@@ -1168,7 +1168,7 @@ do
 
 
 
-    t.writes(T3X.SYSOUT, "\n\n\n\n\rPress ENTER to shutdown.");
+    t.writes(T3X.SYSERR, "\ex00\ey24System Halted. Press ENTER to shutdown.");
     t.read(T3X.SYSIN, arg, 0);
 
     ! Shutdown system
