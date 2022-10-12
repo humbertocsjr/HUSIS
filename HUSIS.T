@@ -725,6 +725,14 @@ disk_reg(id, cil, head, sect) do
 end
 
 !
+! Memory Manager
+!
+
+mem_total_kib() do
+    return t.int86ax(0x12,0,0,0,0,0,0);
+end
+
+!
 ! Minix File System
 !
 
@@ -862,7 +870,7 @@ do
 ! Main routine, initialize operating system
     var arg::15, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
     var disk;
-    ! Replace INT 20, 21(DOS API) and INT 79(HUSIS API)
+    ! Replace INT 20(DOS API), 21(DOS API) and INT 79(HUSIS API)
     int_set(Int79Ant, 0x79, @int79);
     int_set(Int21Ant, 0x20, @int20);
     int_set(Int21Ant, 0x21, @int21);
@@ -878,8 +886,11 @@ do
     disk_init();
 
     ! HUSIS Banner using DOS API implemented by HUSIS
-    t.writeln(T3X.SYSOUT, "\ec\ef03HUSIS \ef07v0.1");
+    t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v0.1\ef07 [RAM: ");
+    t.writenum(T3X.SYSOUT, mem_total_kib());
+    t.writeln(T3X.SYSOUT, " KiB]");
     t.writeln(T3X.SYSOUT, "Copyright (c) 2022, Humberto Costa dos Santos Junior");
+    t.writeln(T3X.SYSOUT, "Build using \ef03T3X/86\ef07 Compiler");
     t.writeln(T3X.SYSOUT, "License: 3-Clause BSD");
     if(Mode = MODE_DOS_APP) t.writeln(T3X.SYSERR, "DOS Application Mode");
     t.writes(T3X.SYSOUT, "\er80=");
@@ -921,8 +932,13 @@ do
 !
     end
     else do
-        fatal_error("Disk parameters incomplete");
+        fatal_error(
+        "Disk parameters incomplete. Use: DISK_ID CILINDERS HEADS SECTORS"
+        );
     end
+
+    t.writes(T3X.SYSOUT, "\n\n\n\n\rPress ENTER to shutdown.");
+    t.read(T3X.SYSIN, arg, 0);
 
     ! Shutdown system
     shutdown();

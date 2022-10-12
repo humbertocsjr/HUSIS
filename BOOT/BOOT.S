@@ -375,9 +375,9 @@ BuscaArq: | 10
     mov ax, cs
     mov ds, ax
     mov si, #Argumento
-    mov di, #81
+    mov di, #0x81
     seg es
-    movb 80, cl
+    movb 0x80, cl
     mov cx, #Tam_Argumento
     rep
     movsb

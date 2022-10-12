@@ -1,10 +1,21 @@
 all:
-	dosbox -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy DISCO.IMG" -C "mount c: ./" -C "cls" -C "c:" -C "make" -exit
+	dosbox -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "mount c: ./" -C "cls" -C "c:" -C "make" -exit
 
 img:
-	mkfs.minix DISCO.IMG -1 -n30
-	dd if=BOOT/BOOT1440.SYS of=DISCO.IMG bs=1024 count=1 conv=notrunc
-	sudo mount -t minix DISCO.IMG TMP/
+	dd if=/dev/zero of=1440.IMG bs=1024 count=1440
+	mkfs.minix 1440.IMG -1 -n30
+	dd if=BOOT/BOOT1440.SYS of=1440.IMG bs=1024 count=1 conv=notrunc
+	sudo mount -t minix 1440.IMG TMP/
+	make img_copy
+	sudo umount TMP
+	dd if=/dev/zero of=360.IMG bs=1024 count=360
+	mkfs.minix 360.IMG -1 -n30
+	dd if=BOOT/BOOT360.SYS of=360.IMG bs=1024 count=1 conv=notrunc
+	sudo mount -t minix 360.IMG TMP/
+	make img_copy
+	sudo umount TMP
+
+img_copy:
 	sudo cp HUSIS.COM TMP/husis
 	sudo mkdir TMP/Programs
 	sudo mkdir TMP/Documents
@@ -16,10 +27,9 @@ img:
 	sudo cp BIN/OSASMCOM.COM TMP/Programs/OSAsmCOM.com
 	sudo cp BIN/OSASMSYS.COM TMP/Programs/OSAsmSYS.com
 	sudo cp BIN/OSASMPRG.COM TMP/Programs/OSAsmPRG.com
-	sudo umount TMP
 
 test: all img
-	dosbox -C "BOOT DISCO.IMG -l A"
+	dosbox -C "BOOT 1440.IMG -l A"
 
 testdos: all img
-	dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy DISCO.IMG" -C "C:\HUSIS 000 80 2 18"
+	dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "C:\HUSIS 000 80 2 18"
