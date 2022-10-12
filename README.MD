@@ -17,7 +17,7 @@ IBM PC or Compatible
 
 Floppy Disk
 
-EGA/VGA Video Card (MDA/CGA Partial Support, in implementation)
+CGA/EGA/VGA Video Card (MDA Partial Support, in implementation)
 
 128 KiB RAM (Standalone) or 256 KiB RAM (DOS App mode)
 
