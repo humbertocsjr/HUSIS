@@ -2,14 +2,10 @@
 
 This Operating System will implements minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
-Bootloader: (86Box Emulator with Xi8088 machine with 128 KiB)
 
-![alt bootloader](SCREENS/BOOT.PNG)
+*Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
 
-
-HUSIS v0.1.0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.1.0-alpha)
-
-![alt first version](SCREENS/V0_1_0.PNG)
+![alt first version](SCREENS/V0_2_0.PNG)
 
 ## Minimum Requiriments
 
@@ -121,3 +117,23 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [ ] Text Editor
 - [ ] BASIC Interpreter
 - [ ] Custom T3X/86 with PRG Support (Minimal RAM usage, fixed 2 KiB Stack)
+
+# History in images
+
+First use of Bootloader: (86Box Emulator with Xi8088 machine with 128 KiB)
+
+![alt bootloader](SCREENS/BOOT.PNG)
+
+
+HUSIS v0.1 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.1.0-alpha)
+
+- Implemented Terminal I/O, Disk I/O and Prototype of MinixFS
+
+![alt first version](SCREENS/V0_1_0.PNG)
+
+
+HUSIS v0.2 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
+
+- Implemented Memory Manager
+
+![alt first version](SCREENS/V0_2_0.PNG)
