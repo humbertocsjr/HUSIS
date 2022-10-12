@@ -613,9 +613,9 @@ fs_init() do
     end
 end
 
-!
+! ==========================================================================
 ! BIOS Disk I/O using Stream API
-!
+! ==========================================================================
 const TOTAL_DISK = 16;
 
 var DiskList[TOTAL_DISK], DiskData[OBJ_STREAM * TOTAL_DISK];
@@ -744,9 +744,9 @@ disk_reg(id, cil, head, sect) do
     return %1;
 end
 
-!
+! ==========================================================================
 ! Memory Manager
-!
+! ==========================================================================
 
 mem_total_kib() do
 ! Get total accessible ram size
