@@ -2,13 +2,22 @@
 
 This Operating System will implements minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
+Bootloader: (86Box Emulator with Xi8088 machine with 128 KiB)
+
+![alt bootloader](SCREENS/BOOT.PNG)
+
+
+HUSIS v0.1.0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.1.0-alpha)
+
+![alt first version](SCREENS/V0_1_0.PNG)
+
 ## Minimum Requiriments
 
 IBM PC or Compatible
 
 Floppy Disk
 
-EGA/VGA Video Card (MDA/CGA Partial Support, in implementation)
+CGA/EGA/VGA Video Card (MDA Partial Support, in implementation)
 
 128 KiB RAM (Standalone) or 256 KiB RAM (DOS App mode)
 
