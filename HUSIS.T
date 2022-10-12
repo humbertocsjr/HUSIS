@@ -733,7 +733,18 @@ end
 !
 
 mem_total_kib() do
+! Get total accessible ram size
+    if(Mode = MODE_DOS_APP) do
+        ! Get allocated paras(16 bytes block) + Local segment / 64
+        return ((t.fargetw(t.local()-1, 3) + t.local()) >> 6) & 0x7fff;
+    end
     return t.int86ax(0x12,0,0,0,0,0,0);
+end
+
+mem_usable_kib() do
+! Get usable ram size
+    ! Total - (Kernel position) - (Kernel Size)
+    return mem_total_kib() - ((t.local() >> 6) & 0x7fff) - 64;
 end
 
 !
@@ -894,6 +905,9 @@ do
     t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v0.1\ef07 [RAM: ");
     t.writenum(T3X.SYSOUT, mem_total_kib());
     t.writeln(T3X.SYSOUT, " KiB]");
+    t.writes(T3X.SYSOUT, "Application RAM: ");
+    t.writenum(T3X.SYSOUT, mem_usable_kib());
+    t.writeln(T3X.SYSOUT, " KiB");
     t.writeln(T3X.SYSOUT, "Copyright (c) 2022, Humberto Costa dos Santos Junior");
     t.writeln(T3X.SYSOUT, "Build using \ef03T3X/86\ef07 Compiler");
     t.writeln(T3X.SYSOUT, "License: 3-Clause BSD");
