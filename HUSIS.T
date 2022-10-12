@@ -220,6 +220,7 @@ stream_seek(stream, pos_low, pos_high) do
     var ret[OBJ_RET];
     var ptr::T3X.PTRSIZE;
     if(stream[STREAM_SEG] = 0) return 0;
+    if(stream[STREAM_PTR_SEEK] = 0) return 0;
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_SEEK]);
@@ -232,6 +233,7 @@ stream_read(stream, buffer, len) do
     var ret[OBJ_RET];
     var ptr::T3X.PTRSIZE;
     if(stream[STREAM_SEG] = 0) return 0;
+    if(stream[STREAM_PTR_READ] = 0) return 0;
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_READ]);
@@ -244,6 +246,7 @@ stream_write(stream, buffer, len) do
     var ret[OBJ_RET];
     var ptr::T3X.PTRSIZE;
     if(stream[STREAM_SEG] = 0) return 0;
+    if(stream[STREAM_PTR_WRITE] = 0) return 0;
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_WRITE]);
@@ -265,6 +268,7 @@ stream_rwrite(stream, seg, buffer, len) do
     var ret[OBJ_RET];
     var ptr::T3X.PTRSIZE;
     if(stream[STREAM_SEG] = 0) return 0;
+    if(stream[STREAM_PTR_WRITE] = 0) return 0;
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_WRITE]);
