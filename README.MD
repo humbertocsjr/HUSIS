@@ -2,6 +2,15 @@
 
 This Operating System will implements minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
+Bootloader:
+
+![alt bootloader](SCREENS/BOOT.PNG)
+
+
+HUSIS v0.1.0:
+
+![alt first version](SCREENS/V0_1_0.PNG)
+
 ## Minimum Requiriments
 
 IBM PC or Compatible
