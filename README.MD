@@ -7,7 +7,7 @@ Bootloader:
 ![alt bootloader](SCREENS/BOOT.PNG)
 
 
-HUSIS v0.1.0:
+HUSIS v0.1.0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.1.0-alpha)
 
 ![alt first version](SCREENS/V0_1_0.PNG)
 
