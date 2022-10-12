@@ -167,7 +167,7 @@ Inicio: | 3
     call Escreva
     .byte 10
     .byte 13
-    .asciz "MinixFS"
+    .asciz "Mounting"
     | Carrega bloco extensao
     mov ax, #1
     xor dx, dx
@@ -290,6 +290,9 @@ Fim:
 .zerob 510-Fim
 .byte 0x55
 .byte 0xaa
+| ==========================================================================
+| Block 0:0:2
+| ==========================================================================
 | Bloco extensao
 Nome:
     .asciz "husis"
@@ -298,7 +301,7 @@ FimNome:
 
 BuscaArq: | 10
     call Escreva
-    .asciz "Busca"
+    .asciz "Search"
     mov ax, SegTemp
     mov es, ax
     mov bx, #0
@@ -335,7 +338,7 @@ BuscaArq: | 10
     _inicial10_encontrado:
     call Ok
     call Escreva
-    .asciz "Carregando Item "
+    .asciz "Loading ID "
     seg es
     mov ax, -2[di]
     call EscrevaUShort
