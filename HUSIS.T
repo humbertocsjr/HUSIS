@@ -567,184 +567,6 @@ term_init() do
 end
 
 ! ==========================================================================
-! File System Infrastructure
-! ==========================================================================
-
-const TOTAL_FS = 16;
-
-const STATUS_FS_AVAIL = 0;
-const STATUS_FS_MOUNTED = 1;
-
-
-struct OBJ_FS = 
-! File System Object
-    FS_STATUS,
-    FS_DISK,
-    FS_SEG,
-    FS_PTR_FIRST_ITEM,
-    FS_PTR_NEXT_ITEM,
-    FS_PTR_UMOUNT;
-
-var FSList[TOTAL_FS], FSData[OBJ_FS * TOTAL_FS];
-
-fs_reg(disk, seg, ptr_first_item, ptr_next_item, ptr_umount) do
-! Register new mounted file system
-    var i;
-    for(i=0,TOTAL_FS) do
-        if(FSList[i][FS_STATUS] = STATUS_FS_AVAIL) do
-            FSList[i][FS_STATUS] := STATUS_FS_MOUNTED;
-            FSList[i][FS_SEG] := seg;
-            FSList[i][FS_DISK] := disk;
-            FSList[i][FS_PTR_FIRST_ITEM] := ptr_first_item;
-            FSList[i][FS_PTR_NEXT_ITEM] := ptr_next_item;
-            FSList[i][FS_PTR_UMOUNT] := ptr_umount;
-            return i;
-        end
-    end
-    return %1;
-end
-
-fs_init() do
-! Initialize file system global vars
-    var i;
-    for(i=0,TOTAL_FS) do
-        FSList[i] := @FSData[i * OBJ_FS];
-        FSList[i][FS_STATUS] := STATUS_FS_AVAIL;
-    end
-end
-
-! ==========================================================================
-! BIOS Disk I/O using Stream API
-! ==========================================================================
-const TOTAL_DISK = 16;
-
-var DiskList[TOTAL_DISK], DiskData[OBJ_STREAM * TOTAL_DISK];
-
-const DISK_CILINDERS = STREAM_AUX1;
-const DISK_HEADS = STREAM_AUX2;
-const DISK_SECTORS = STREAM_AUX3;
-const DISK_BIOS_ID = STREAM_AUX4;
-const DISK_POS_LOW = STREAM_POS;
-const DISK_POS_HIGH = STREAM_POS_HIGH;
-
-_disk_seek(stream, pos_low, pos_high, ret) far do
-! 'Seek' on disk
-    stream[DISK_POS_LOW] := pos_low;
-    stream[DISK_POS_HIGH] := pos_high;
-    ret[RET_OK] := TRUE;
-end
-
-_disk_read(stream, seg, dest, len, ret) far do
-! Read block from disk using BIOS Disk API
-    var ax, bx, cx, dx, i;
-    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
-    ret[RET_OK] := FALSE;
-    ret[RET_VALUE] := 0;
-    if(len \= 512) return;
-    posicao := stream[DISK_POS_LOW];
-    cil_tot := stream[DISK_CILINDERS];
-    head_tot := stream[DISK_HEADS];
-    sect_tot := stream[DISK_SECTORS];
-    cil := posicao / (head_tot * sect_tot);
-    head := (posicao / sect_tot) mod head_tot;
-    sect := (posicao mod sect_tot) + 1;
-    if(cil >= cil_tot) return;
-    ax := 0x201;
-    bx := dest;
-    cx := (cil << 8) | sect | ((cil >> 8) << 6);
-    dx := stream[DISK_BIOS_ID] | (head << 8);
-    for(i=0,3) do
-        ! Try 3 times (Physical Floppy disk controller needed this)
-        ret[RET_OK] := TRUE;
-        ret[RET_VALUE] := 1;
-        ! Try reading block
-        if(t.int86c(0x13, ax,bx,cx,dx, 0,0) = 0) return;
-        ! Reset disk controller if fails
-        t.int86c(0x13, 0,0,0,stream[DISK_BIOS_ID], 0,0);
-    end
-    ret[RET_OK] := FALSE;
-    ret[RET_VALUE] := 0;
-end
-
-_disk_write(stream, seg, orig, len, ret) far do
-! Write block from disk using BIOS Disk API
-    var ax, bx, cx, dx, i;
-    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
-    ret[RET_OK] := FALSE;
-    ret[RET_VALUE] := 0;
-    if(len \= 512) return;
-    posicao := stream[DISK_POS_LOW];
-    cil_tot := stream[DISK_CILINDERS];
-    head_tot := stream[DISK_HEADS];
-    sect_tot := stream[DISK_SECTORS];
-    cil := posicao / (head_tot * sect_tot);
-    head := (posicao / sect_tot) mod head_tot;
-    sect := (posicao mod sect_tot) + 1;
-    if(cil >= cil_tot) return;
-    ax := 0x301;
-    bx := orig;
-    cx := (cil << 8) | sect | ((cil >> 8) << 6);
-    dx := stream[DISK_BIOS_ID] | (head << 8);
-    for(i=0,3) do
-        ! Try 3 times (Physical Floppy disk controller needed this)
-        ret[RET_OK] := TRUE;
-        ret[RET_VALUE] := 1;
-        ! Try writing block
-        if(t.int86c(0x13, ax,bx,cx,dx, 0,0) = 0) return;
-        ! Reset disk controller if fails
-        t.int86c(0x13, 0,0,0,stream[DISK_BIOS_ID], 0,0);
-    end
-    ret[RET_OK] := FALSE;
-    ret[RET_VALUE] := 0;
-end
-
-_disk_avail(stream, ret) far do
-! Return if disk has data avail
-    ret[RET_OK] := TRUE;
-    ret[RET_VALUE] := 1;
-end
-
-_disk_can_read(stream, ret) far do
-! Return if can read
-    ret[RET_OK] := TRUE;
-end 
-
-_disk_can_write(stream, ret) far do
-! Return if can write
-    ret[RET_OK] := TRUE;
-end 
-
-disk_init() do
-! Initialize global disk structures
-    var i;
-    for(i=0,TOTAL_DISK) do
-        DiskList[i] := @DiskData[i * OBJ_STREAM];
-        DiskList[i][STREAM_STATUS] := STATUS_UNKNOWN;
-    end
-end
-
-disk_reg(id, cil, head, sect) do
-! Register new BIOS Disk
-    var i;
-    for(i=0,TOTAL_DISK) do
-        if(DiskList[i][STREAM_STATUS] = STATUS_UNKNOWN) do
-            new(
-                DiskList[i],
-                t.local(),
-                @_disk_avail, @_disk_seek, @_disk_can_read, 
-                @_disk_read, @_disk_can_write, @_disk_write
-                );
-            DiskList[i][DISK_CILINDERS] := cil;
-            DiskList[i][DISK_HEADS] := head;
-            DiskList[i][DISK_SECTORS] := sect;
-            DiskList[i][DISK_BIOS_ID] := id;
-            return i;
-        end
-    end
-    return %1;
-end
-
-! ==========================================================================
 ! Memory Manager
 ! ==========================================================================
 
@@ -928,8 +750,262 @@ mem_calc_free_kib() do
 end
 
 ! ==========================================================================
+! BIOS Disk I/O using Stream API
+! ==========================================================================
+const TOTAL_DISK = 16;
+
+var DiskList[TOTAL_DISK], DiskData[OBJ_STREAM * TOTAL_DISK];
+
+const DISK_CILINDERS = STREAM_AUX1;
+const DISK_HEADS = STREAM_AUX2;
+const DISK_SECTORS = STREAM_AUX3;
+const DISK_BIOS_ID = STREAM_AUX4;
+const DISK_POS_LOW = STREAM_POS;
+const DISK_POS_HIGH = STREAM_POS_HIGH;
+
+_disk_seek(stream, pos_low, pos_high, ret) far do
+! 'Seek' on disk
+    stream[DISK_POS_LOW] := pos_low;
+    stream[DISK_POS_HIGH] := pos_high;
+    ret[RET_OK] := TRUE;
+end
+
+_disk_read(stream, seg, dest, len, ret) far do
+! Read block from disk using BIOS Disk API
+    var ax, bx, cx, dx, i;
+    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
+    ret[RET_OK] := FALSE;
+    ret[RET_VALUE] := 0;
+    if(len \= 512) return;
+    posicao := stream[DISK_POS_LOW];
+    cil_tot := stream[DISK_CILINDERS];
+    head_tot := stream[DISK_HEADS];
+    sect_tot := stream[DISK_SECTORS];
+    cil := posicao / (head_tot * sect_tot);
+    head := (posicao / sect_tot) mod head_tot;
+    sect := (posicao mod sect_tot) + 1;
+    if(cil >= cil_tot) return;
+    ax := 0x201;
+    bx := dest;
+    cx := (cil << 8) | sect | ((cil >> 8) << 6);
+    dx := stream[DISK_BIOS_ID] | (head << 8);
+    for(i=0,3) do
+        ! Try 3 times (Physical Floppy disk controller needed this)
+        ret[RET_OK] := TRUE;
+        ret[RET_VALUE] := 1;
+        ! Try reading block
+        if(t.int86c(0x13, ax,bx,cx,dx, 0,0) = 0) return;
+        ! Reset disk controller if fails
+        t.int86c(0x13, 0,0,0,stream[DISK_BIOS_ID], 0,0);
+    end
+    ret[RET_OK] := FALSE;
+    ret[RET_VALUE] := 0;
+end
+
+_disk_write(stream, seg, orig, len, ret) far do
+! Write block from disk using BIOS Disk API
+    var ax, bx, cx, dx, i;
+    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
+    ret[RET_OK] := FALSE;
+    ret[RET_VALUE] := 0;
+    if(len \= 512) return;
+    posicao := stream[DISK_POS_LOW];
+    cil_tot := stream[DISK_CILINDERS];
+    head_tot := stream[DISK_HEADS];
+    sect_tot := stream[DISK_SECTORS];
+    cil := posicao / (head_tot * sect_tot);
+    head := (posicao / sect_tot) mod head_tot;
+    sect := (posicao mod sect_tot) + 1;
+    if(cil >= cil_tot) return;
+    ax := 0x301;
+    bx := orig;
+    cx := (cil << 8) | sect | ((cil >> 8) << 6);
+    dx := stream[DISK_BIOS_ID] | (head << 8);
+    for(i=0,3) do
+        ! Try 3 times (Physical Floppy disk controller needed this)
+        ret[RET_OK] := TRUE;
+        ret[RET_VALUE] := 1;
+        ! Try writing block
+        if(t.int86c(0x13, ax,bx,cx,dx, 0,0) = 0) return;
+        ! Reset disk controller if fails
+        t.int86c(0x13, 0,0,0,stream[DISK_BIOS_ID], 0,0);
+    end
+    ret[RET_OK] := FALSE;
+    ret[RET_VALUE] := 0;
+end
+
+_disk_avail(stream, ret) far do
+! Return if disk has data avail
+    ret[RET_OK] := TRUE;
+    ret[RET_VALUE] := 1;
+end
+
+_disk_can_read(stream, ret) far do
+! Return if can read
+    ret[RET_OK] := TRUE;
+end 
+
+_disk_can_write(stream, ret) far do
+! Return if can write
+    ret[RET_OK] := TRUE;
+end 
+
+disk_init() do
+! Initialize global disk structures
+    var i;
+    for(i=0,TOTAL_DISK) do
+        DiskList[i] := @DiskData[i * OBJ_STREAM];
+        DiskList[i][STREAM_STATUS] := STATUS_UNKNOWN;
+    end
+end
+
+disk_reg(id, cil, head, sect) do
+! Register new BIOS Disk
+    var i;
+    for(i=0,TOTAL_DISK) do
+        if(DiskList[i][STREAM_STATUS] = STATUS_UNKNOWN) do
+            new(
+                DiskList[i],
+                t.local(),
+                @_disk_avail, @_disk_seek, @_disk_can_read, 
+                @_disk_read, @_disk_can_write, @_disk_write
+                );
+            DiskList[i][DISK_CILINDERS] := cil;
+            DiskList[i][DISK_HEADS] := head;
+            DiskList[i][DISK_SECTORS] := sect;
+            DiskList[i][DISK_BIOS_ID] := id;
+            return i;
+        end
+    end
+    return %1;
+end
+
+! ==========================================================================
+! File System Infrastructure
+! ==========================================================================
+
+const TOTAL_FS = 16;
+
+const STATUS_FS_AVAIL = 0;
+const STATUS_FS_MOUNTED = 1;
+
+
+struct OBJ_FS = 
+! File System Object
+    FS_STATUS,
+    FS_DISK,
+    FS_SEG,
+    FS_PTR_FIRST_ITEM,
+    FS_PTR_NEXT_ITEM,
+    FS_PTR_UMOUNT,
+    FS_AUX1,
+    FS_AUX2,
+    FS_AUX3,
+    FS_AUX4,
+    FS_AUX5,
+    FS_AUX6,
+    FS_AUX7,
+    FS_AUX8,
+    FS_AUX9,
+    FS_AUX10;
+
+const TYPE_FILE = 1;
+const TYPE_DIRECTORY = 2;
+
+struct OBJ_ITEM_HEADER =
+! File System Item Object
+    ITEM_TYPE,
+    ITEM_PARENT_ID,
+    ITEM_ID,
+    ITEM_SEG_OPEN,
+    ITEM_PTR_OPEN,
+    ITEM_NAME;
+const OBJ_ITEM = OBJ_ITEM_HEADER + 16; ! 16 Words/32 Bytes to name
+
+const SIZE_NAME = 30;
+
+var FSList[TOTAL_FS], FSData[OBJ_FS * TOTAL_FS];
+
+new_item(item, type, seg, ptr_open, parent_id, id) do
+! Create file system item
+    item[ITEM_TYPE] := type;
+    item[ITEM_ID] := id;
+    item[ITEM_PARENT_ID] := parent_id;
+    item[ITEM_SEG_OPEN] := seg;
+    item[ITEM_PTR_OPEN] := ptr_open;
+    item[ITEM_NAME] := @item[ITEM_NAME] + 2;
+    item[ITEM_NAME]::0 := 0;
+end
+
+fs_reg(disk, seg, ptr_first_item, ptr_next_item, ptr_umount) do
+! Register new mounted file system
+    var i;
+    for(i=0,TOTAL_FS) do
+        if(FSList[i][FS_STATUS] = STATUS_FS_AVAIL) do
+            FSList[i][FS_STATUS] := STATUS_FS_MOUNTED;
+            FSList[i][FS_SEG] := seg;
+            FSList[i][FS_DISK] := disk;
+            FSList[i][FS_PTR_FIRST_ITEM] := ptr_first_item;
+            FSList[i][FS_PTR_NEXT_ITEM] := ptr_next_item;
+            FSList[i][FS_PTR_UMOUNT] := ptr_umount;
+            return i;
+        end
+    end
+    return %1;
+end
+
+fs_init() do
+! Initialize file system global vars
+    var i;
+    for(i=0,TOTAL_FS) do
+        FSList[i] := @FSData[i * OBJ_FS];
+        FSList[i][FS_STATUS] := STATUS_FS_AVAIL;
+    end
+end
+
+fs_open(item, stream) do
+! Open item, returns stream
+    var ret[OBJ_RET], ptr[T3X.PTRSIZE];
+    if(item[ITEM_TYPE] = TYPE_DIRECTORY) return FALSE;
+    if(item[ITEM_SEG_OPEN] = 0) return FALSE;
+    if(item[ITEM_PTR_OPEN] = 0) return FALSE;
+    t.setptr(ptr, item[ITEM_SEG_OPEN], item[ITEM_PTR_OPEN]);
+    callfar ptr(item, stream, ret);
+    return ret[RET_OK];
+end
+
+fs_first(fs, id, item) do
+! Get first sub item from directory(by ID)
+    var ret[OBJ_RET], ptr[T3X.PTRSIZE];
+    if(FSList[fs][FS_SEG] = 0) return FALSE;
+    if(FSList[fs][FS_PTR_FIRST_ITEM] = 0) return FALSE;
+    t.setptr(ptr, FSList[fs][FS_SEG], FSList[fs][FS_PTR_FIRST_ITEM]);
+    callfar ptr(fs, id, item, ret);
+    return ret[RET_OK];
+end
+
+fs_next(fs, item) do
+! Get next sub item from directory
+    var ret[OBJ_RET], ptr[T3X.PTRSIZE];
+    if(FSList[fs][FS_SEG] = 0) return FALSE;
+    if(FSList[fs][FS_PTR_NEXT_ITEM] = 0) return FALSE;
+    t.setptr(ptr, FSList[fs][FS_SEG], FSList[fs][FS_PTR_NEXT_ITEM]);
+    callfar ptr(fs, item, ret);
+    return ret[RET_OK];
+end
+
+! ==========================================================================
 ! Minix File System
 ! ==========================================================================
+
+const MINIXFS_TOTAL_ITENS = FS_AUX1;
+const MINIXFS_TOTAL_ZONES = FS_AUX2;
+const MINIXFS_MAP_ITENS = FS_AUX3;
+const MINIXFS_MAP_ITENS_SIZE = FS_AUX4;
+const MINIXFS_MAP_ZONES = FS_AUX5;
+const MINIXFS_MAP_ZONES_SIZE = FS_AUX6;
+const MINIXFS_LIST_ITENS = FS_AUX7;
+const MINIXFS_LIST_ITENS_SIZE = FS_AUX8;
 
 minixfs_read_zone(disk, position, dest) do
 ! Read zones (1024 bytes disk block) using 512 bytes physical blocks
@@ -940,14 +1016,50 @@ minixfs_read_zone(disk, position, dest) do
     return TRUE;
 end
 
+_minixfs_open(item, stream, ret) far do
+! Open file item
+
+end
+
+_minixfs_first_item(fs, id, item, ret) far do
+! Read first sub-item from item id
+
+end
+
+_minixfs_next_item(fs, item, ret) far do
+! Read next item from existent item
+end
+
+_minixfs_umount(fs, ret) far do
+! Umount partition
+ret[RET_OK] := TRUE;
+end
+
 minixfs_mount(disk) do
 ! Mount Minix File System
-    var zone::1024;
+    var zone::1024, fs, pos;
     if(\minixfs_read_zone(disk, 1, zone)) return FALSE;
     if(zone[8] \= 5007) return FALSE; ! MinixFS v1 30 Char Signature
-!
-! TODO: Implement interpretation of MinixFS Super block data
-!
+    fs := fs_reg
+    (
+        disk,
+        t.local(),
+        @_minixfs_first_item,
+        @_minixfs_next_item,
+        @_minixfs_umount
+    );
+    if(fs < 0) return FALSE;
+    pos := 2;
+    FSList[fs][MINIXFS_MAP_ITENS] := pos;
+    pos := pos + zone[2];
+    FSList[fs][MINIXFS_MAP_ITENS_SIZE] := zone[2];
+    FSList[fs][MINIXFS_MAP_ZONES] := pos;
+    pos := pos + zone[3];
+    FSList[fs][MINIXFS_MAP_ZONES_SIZE] := zone[3];
+    FSList[fs][MINIXFS_LIST_ITENS] := pos;
+    FSList[fs][MINIXFS_TOTAL_ITENS] := zone[0];
+    FSList[fs][MINIXFS_TOTAL_ZONES] := zone[1];
+    FSList[fs][MINIXFS_LIST_ITENS_SIZE] := zone[0] / 32;
     return TRUE;
 end
 
@@ -1007,24 +1119,30 @@ end
 
 int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! DOS API
-    var func, al, preserve;
+    var func, al, preserve, tmp[OBJ_STREAM];
     func := ax >> 8;
     al := ax & 0xff;
     ie(func = 0x40) do ! DOS WRITE
         ie(bx = 1) do ! SYSOUT
-            stream_write(StreamOut, dx, cx);
+            t.farcopy(ds, tmp, t.local(), StreamOut, OBJ_STREAM<<1);
+            stream_write(tmp, dx, cx);
+            t.farcopy(t.local(), StreamOut, ds, tmp, OBJ_STREAM<<1);
         end
         else ie(bx = 2) do ! SYSERR
-            preserve := StreamErr[TERM_COLORS];
-            StreamErr[TERM_COLORS] := 4 << 8;
-            stream_write(StreamErr, dx, cx);
-            StreamErr[TERM_COLORS] := preserve;
+            t.farcopy(ds, tmp, t.local(), StreamErr, OBJ_STREAM<<1);
+            preserve := tmp[TERM_COLORS];
+            tmp[TERM_COLORS] := 4 << 8;
+            stream_write(tmp, dx, cx);
+            tmp[TERM_COLORS] := preserve;
+            t.farcopy(t.local(), StreamErr, ds, tmp, OBJ_STREAM<<1);
         end
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
     else ie(func = 0x3f) do ! DOS READ
         ie(bx = 0) do ! SYSIN
+            t.farcopy(ds, tmp, t.local(), StreamIn, OBJ_STREAM<<1);
             stream_read(StreamIn, dx, cx);
+            t.farcopy(t.local(), StreamIn, ds, tmp, OBJ_STREAM<<1);
         end
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
@@ -1040,7 +1158,7 @@ var Int79Ant[T3X.PTRSIZE], Int20Ant[T3X.PTRSIZE], Int21Ant[T3X.PTRSIZE];
 
 shutdown() do
 ! Shutdown HUSIS
-    t.writeln(T3X.SYSOUT, "\r\n\ef03SYSTEM STOPPED.");
+    t.writeln(T3X.SYSOUT, "\ec\ef03SYSTEM HALTED.");
 
     ! Restore Interrupts
     int_restore(Int79Ant, 0x79);
