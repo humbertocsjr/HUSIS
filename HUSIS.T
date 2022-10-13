@@ -818,7 +818,7 @@ mem_defrag() do
     eol := false;
     while(\eol) do
         eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
-        if
+        ie
         (
             (t.fargetw(seg, MCB_PROCESS_W) = 0) &
             (t.fargetw(prev_seg, MCB_PROCESS_W) = 0)
@@ -839,7 +839,7 @@ mem_defrag() do
             );
             t.farsetw(seg, MCB_PROCESS_W, 0xffff);
         end
-        if(t.fargetw(seg, MCB_PROCESS_W) \= 0) prev_seg := seg;
+        else if(t.fargetw(seg, MCB_PROCESS_W) \= 0) prev_seg := seg;
         seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
     end
 end
