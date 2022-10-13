@@ -72,7 +72,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [x] Stream I/O Infrastructure
 - [x] Terminal I/O using Stream
 - [x] BIOS Disk I/O using Stream
-- [ ] File System Infrastructure
+- [x] File System Infrastructure
 - [ ] Minix File System
 - [ ] Load and Execute Application from File
 - [ ] COM Executable Support (ORG 0x100 ARGS 0x81 STACK 0xffff SIZE 64 KiB)
