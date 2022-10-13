@@ -14,4 +14,4 @@ Old-School Assembler para BIOS v1.17 [PT-BR]
 -= Shell =-
 Text = 1276, Data = 622, Symbols = 39, Nlist = 358, Labels = 0
 -= HUSIS Kernel =-
-Text = 17880, Data = 1936, Symbols = 251, Nlist = 2925, Labels = 382
+Text = 17879, Data = 1936, Symbols = 251, Nlist = 2925, Labels = 382

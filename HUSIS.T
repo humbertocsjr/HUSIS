@@ -8,7 +8,7 @@
 !
 
 const VERSION = 0;
-const SUB_VERSION = 2;
+const SUB_VERSION = 3;
 const REVISION = 0;
 
 const TRUE = %1;
@@ -1032,7 +1032,7 @@ end
 
 _minixfs_umount(fs, ret) far do
 ! Umount partition
-ret[RET_OK] := TRUE;
+    ret[RET_OK] := TRUE;
 end
 
 minixfs_mount(disk) do
