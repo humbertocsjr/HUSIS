@@ -1107,29 +1107,31 @@ int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
 end
 
 int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! HUSIS API
+! HUSIS API (DS,ES,SS,SP from Application)
     int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     return 0;
 end
 
 int20(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! DOS API
+! DOS API (DS,ES,SS,SP from Application)
     int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
 end
 
 int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! DOS API
+! DOS API (DS,ES,SS,SP from Application)
     var func, al, preserve, tmp[OBJ_STREAM];
     func := ax >> 8;
     al := ax & 0xff;
     ie(func = 0x40) do ! DOS WRITE
         ie(bx = 1) do ! SYSOUT
             t.farcopy(ds, tmp, t.local(), StreamOut, OBJ_STREAM<<1);
+            ! Copy Kernel Stream object to Application memory
             stream_write(tmp, dx, cx);
             t.farcopy(t.local(), StreamOut, ds, tmp, OBJ_STREAM<<1);
         end
         else ie(bx = 2) do ! SYSERR
             t.farcopy(ds, tmp, t.local(), StreamErr, OBJ_STREAM<<1);
+            ! Copy Kernel Stream object to Application memory
             preserve := tmp[TERM_COLORS];
             tmp[TERM_COLORS] := 4 << 8;
             stream_write(tmp, dx, cx);
@@ -1141,6 +1143,7 @@ int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
     else ie(func = 0x3f) do ! DOS READ
         ie(bx = 0) do ! SYSIN
             t.farcopy(ds, tmp, t.local(), StreamIn, OBJ_STREAM<<1);
+            ! Copy Kernel Stream object to Application memory
             stream_read(StreamIn, dx, cx);
             t.farcopy(t.local(), StreamIn, ds, tmp, OBJ_STREAM<<1);
         end
