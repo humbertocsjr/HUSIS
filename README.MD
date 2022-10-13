@@ -1,6 +1,6 @@
 # HUSIS - Operating System for IBM PC and Compatibles
 
-This Operating System will implements minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
+This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
 
 *Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
