@@ -134,6 +134,6 @@ HUSIS v0.1 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 
 HUSIS v0.2 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
 
-- Memory Manager implemented (Known bugs: Memory Defrag not works)
+- Memory Manager implemented (Known bugs: Memory Defrag don't works)
 
 ![alt first version](SCREENS/V0_2_0.PNG)
