@@ -15,7 +15,7 @@ Floppy Disk
 
 CGA/EGA/VGA Video Card (MDA Partial Support, in implementation)
 
-128 KiB RAM (Standalone) or 256 KiB RAM (DOS App mode)
+256 KiB RAM (Standalone) or 384 KiB RAM (DOS App mode)
 
 ## How to use
 
