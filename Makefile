@@ -17,6 +17,7 @@ img:
 
 img_copy:
 	sudo cp HUSIS.COM TMP/husis
+	sudo cp AUTOEXEC TMP/autoexec
 	sudo mkdir TMP/Programs
 	sudo mkdir TMP/Documents
 	sudo mkdir TMP/Library

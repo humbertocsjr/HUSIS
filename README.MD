@@ -5,7 +5,7 @@ This Operating System will implement minimum DOS INT 0x21 function set to run [T
 
 *Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
 
-![alt first version](SCREENS/V0_2_0.PNG)
+![alt first version](SCREENS/V0_3_0.PNG)
 
 ## Minimum Requiriments
 
@@ -137,3 +137,12 @@ HUSIS v0.2 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 - Memory Manager implemented (Known bugs: Memory Defrag don't works)
 
 ![alt first version](SCREENS/V0_2_0.PNG)
+
+
+HUSIS v0.3 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.3.0-alpha)
+
+- FIX: Memory Defrag
+- File System API
+- MinixFS Open/Close/Read implemented
+
+![alt first version](SCREENS/V0_3_0.PNG)
