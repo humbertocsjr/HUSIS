@@ -86,7 +86,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 - [x] Implement Standard Output INT 0x21 AH 0x40 BX 1
 - [x] Implement Standard Error Output INT 0x21 AH 0x40 BX 2
-- [x] Implement Standard Input
+- [x] Implement Standard Input INT 0x21 AH 0x3f BX 0
 - [ ] Implement File Open
 - [ ] Implement File Close
 - [ ] Implement File First Item on Directory
