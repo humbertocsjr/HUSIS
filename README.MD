@@ -7,6 +7,10 @@ This Operating System will implement minimum DOS INT 0x21 function set to run [T
 
 ![alt first version](SCREENS/V0_4_0.PNG)
 
+## Terminal Implementation
+
+This implements a static screen terminal without scroll function, my inspiration is IBM CICS from Mainframe, with forms based screens.
+
 ## Minimum Requiriments
 
 IBM PC or Compatible
