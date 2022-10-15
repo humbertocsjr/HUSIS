@@ -8,7 +8,7 @@
 !
 
 const VERSION = 0;
-const SUB_VERSION = 3;
+const SUB_VERSION = 4;
 const REVISION = 0;
 
 const TRUE = %1;
@@ -115,6 +115,19 @@ t.writeln(file, str) do
 ! Write line string to file
     t.write(file, str, str_len(str));
     t.write(file, "\r\n", 2);
+end
+
+t.rwrites(file, seg, str) do
+! Write string to file
+    var tmp::128;
+    t.farcopy(t.stack(), tmp, seg, str, 128);
+    t.write(file, tmp, str_len(tmp));
+end
+
+t.rwriteln(file, seg, str) do
+! Write line string to file
+    t.rwrites(file, seg, str);
+    t.rwrites(file, t.local(), "\r\n");
 end
 
 t.writec(file, c) do
@@ -254,7 +267,7 @@ stream_read(stream, buffer, len) do
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_READ]);
-    callfar ptr(stream, t.local(), buffer, len, ret);
+    callfar ptr(stream, t.stack(), buffer, len, ret);
     return ret[RET_VALUE];
 end
 
@@ -267,7 +280,7 @@ stream_write(stream, buffer, len) do
     t.setptr(ptr, 
         stream[STREAM_SEG],
         stream[STREAM_PTR_WRITE]);
-    callfar ptr(stream, t.local(), buffer, len, ret);
+    callfar ptr(stream, t.stack(), buffer, len, ret);
     return ret[RET_VALUE];
 end
 
@@ -356,12 +369,7 @@ term_cls(stream) do
     stream[TERM_Y] := 0;
     stream[TERM_X] := 0;
     stream[STREAM_PTR_BUFFER] := 0;
-    for(i=0,25*80) do
-        t.farsetw(
-            stream[STREAM_SEG_BUFFER], 
-            i<<1, 
-            ' ' | (stream[TERM_COLORS] << 8));
-    end
+    t.farfill(stream[STREAM_SEG_BUFFER], 0, 0, 80*25*2);
 end
 
 term_calc_pos(stream, x, y) do
@@ -588,7 +596,7 @@ var MemFirstSegment;
 
 mem_total_kib() do
 ! Get total accessible ram size
-    if(Mode = MODE_DOS_APP) do
+    if(t.fargetw(t.local(), @Mode) = MODE_DOS_APP) do
         ! (Get MCB allocated paras(16 bytes block) + Local segment) / 64
         return (
                 (t.fargetw(t.local()-1, MCB_PARAGRAPHS_W) + 
@@ -644,7 +652,7 @@ mem_defrag() do
 ! Find and merge free blocks
     var seg, prev_seg, eol;
     if(t.fargetb(seg, MCB_TYPE_B) = 'Z') return;
-    prev_seg := MemFirstSegment;
+    prev_seg := t.fargetw(t.local(), @MemFirstSegment);
     seg := t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + prev_seg + 1;
     eol := false;
     while(\eol) do
@@ -685,7 +693,7 @@ mem_alloc(process, paras) do
 ! Return 0 if fails
     var seg, next_seg, size;
     if((paras < 0) | (paras > 8192)) return 0; ! More than 128 KiB
-    seg := mem_find(MemFirstSegment, 0);
+    seg := mem_find(t.fargetw(t.local(), @MemFirstSegment), 0);
     while(seg \= 0) do
         size := mem_size(seg + 1);
         if((size >= paras) | size < 0) leave;
@@ -726,7 +734,7 @@ end
 mem_free_process(process) do
 ! Free all blocks of one process
     var seg, eol;
-    seg := MemFirstSegment;
+    seg := t.fargetw(t.local(), @MemFirstSegment);
     eol := false;
     while(\eol) do
         eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
@@ -741,7 +749,7 @@ end
 mem_calc_free() do
 ! Return total free space
     var total, seg, eol;
-    seg := MemFirstSegment;
+    seg := t.fargetw(t.local(), @MemFirstSegment);
     eol := false;
     total := 0;
     while(\eol) do
@@ -937,7 +945,7 @@ const OBJ_ITEM = OBJ_ITEM_HEADER + 16; ! 16 Words/32 Bytes to name
 
 const SIZE_NAME = 30;
 
-var FSList[TOTAL_FS], FSData[OBJ_FS * TOTAL_FS];
+var FSList[TOTAL_FS], FSData[OBJ_FS * TOTAL_FS], FSCurrent;
 
 new_item(item, type, seg, ptr_open, parent_id, id) do
 ! Create file system item
@@ -975,9 +983,10 @@ fs_init() do
         FSList[i][FS_ID] := i;
         FSList[i][FS_STATUS] := STATUS_FS_AVAIL;
     end
+    FSCurrent := 0;
 end
 
-fs_open(item, stream) do
+fs_open_item(item, stream) do
 ! Open item, returns stream
     var ret[OBJ_RET], ptr[T3X.PTRSIZE];
     if(item[ITEM_TYPE] = TYPE_DIRECTORY) return FALSE;
@@ -990,22 +999,115 @@ end
 
 fs_first(fs, id, item) do
 ! Get first sub item from directory(by ID)
-    var ret[OBJ_RET], ptr[T3X.PTRSIZE];
-    if(FSList[fs][FS_SEG] = 0) return FALSE;
-    if(FSList[fs][FS_PTR_FIRST_ITEM] = 0) return FALSE;
-    t.setptr(ptr, FSList[fs][FS_SEG], FSList[fs][FS_PTR_FIRST_ITEM]);
-    callfar ptr(FSList[fs], id, item, ret);
+    var ret[OBJ_RET], ptr[T3X.PTRSIZE], fsobj[OBJ_FS];
+    t.farcopy
+    (
+        t.stack(), 
+        fsobj,
+        t.local(), 
+        t.fargetw(t.local(),FSList) + (fs << 1), 
+        OBJ_FS << 1
+    );
+    if(fsobj[FS_SEG] = 0) return FALSE;
+    if(fsobj[FS_PTR_FIRST_ITEM] = 0) return FALSE;
+    t.setptr(ptr, fsobj[FS_SEG], fsobj[FS_PTR_FIRST_ITEM]);
+    callfar ptr(fsobj, id, item, ret);
     return ret[RET_OK];
 end
 
 fs_next(fs, item) do
 ! Get next sub item from directory
-    var ret[OBJ_RET], ptr[T3X.PTRSIZE];
-    if(FSList[fs][FS_SEG] = 0) return FALSE;
-    if(FSList[fs][FS_PTR_NEXT_ITEM] = 0) return FALSE;
-    t.setptr(ptr, FSList[fs][FS_SEG], FSList[fs][FS_PTR_NEXT_ITEM]);
-    callfar ptr(FSList[fs], item, ret);
+    var ret[OBJ_RET], ptr[T3X.PTRSIZE], fsobj[OBJ_FS];
+    t.farcopy
+    (
+        t.stack(), 
+        fsobj,
+        t.local(), 
+        t.fargetw(t.local(),FSList) + (fs << 1), 
+        OBJ_FS << 1
+    );
+    if(fsobj[FS_SEG] = 0) return FALSE;
+    if(fsobj[FS_PTR_NEXT_ITEM] = 0) return FALSE;
+    t.setptr(ptr, fsobj[FS_SEG], fsobj[FS_PTR_NEXT_ITEM]);
+    callfar ptr(fsobj, item, ret);
     return ret[RET_OK];
+end
+
+fs_open_file(address, stream) do
+! Open file from address
+! Accepted address format:
+!  [FS]/DIR/DIR/FILE
+! OR
+!  /DIR/DIR/FILE
+!
+!  - FS = Number of File System, started in 0
+!  - DIR or FILE = Name
+    var fsobj[OBJ_FS], fs, item[OBJ_ITEM], i, j, ok, name::32, name_len, dir;
+    var old_item[OBJ_ITEM];
+    fs := FSCurrent;
+    ok := FALSE;
+    i := 0;
+    if(address::0 = '[') do
+        fs := 0;
+        for(i=1,str_len(address)) do
+            if(address::i = ']') leave;
+            if(\char_is_num(address::i)) return FALSE;
+            fs := (fs * 10) + (address::i - '0');
+        end
+        i := i + 1;
+    end
+    ! Load file system
+    t.farcopy
+    (
+        t.stack(), 
+        fsobj,
+        t.local(), 
+        t.fargetw(t.local(),FSList) + (fs << 1), 
+        OBJ_FS << 1
+    );
+    if(fsobj[FS_STATUS] \= STATUS_FS_MOUNTED) return FALSE;
+    if(address::i \= '/') return FALSE;
+    i := i + 1;
+    dir := 0;
+    name_len := 0;
+    name::name_len := 0;
+    for(i = i, str_len(address)) do
+        ie(address::i = '/') do
+            ok := FALSE;
+            j := fs_first(fsobj[FS_ID], dir, item);
+            while(j) do
+                if(str_equal(name, item[ITEM_NAME])) do
+                    ok := TRUE;
+                    dir := item[ITEM_ID];
+                    t.memcopy(old_item, item, OBJ_ITEM << 1);
+                    leave;
+                end
+                j := fs_next(fsobj[FS_ID], item);
+            end
+            if(ok = FALSE) return FALSE;
+            name_len := 0;
+            name::name_len := 0;
+        end
+        else do
+            if(name_len = 31) return FALSE;
+            name::name_len := address::i;
+            name_len := name_len + 1;
+            name::name_len := 0;
+        end
+    end
+    if(name_len = 0) return FALSE;
+    ok := FALSE;
+    j := fs_first(fsobj[FS_ID], dir, item);
+    while(j) do
+        if(str_equal(name, item[ITEM_NAME])) do
+            ok := TRUE;
+            dir := item[ITEM_ID];
+            leave;
+        end
+        j := fs_next(fsobj[FS_ID], item);
+    end
+    if(ok = FALSE) return FALSE;
+    return fs_open_item(item, stream);
 end
 
 ! ==========================================================================
@@ -1395,7 +1497,7 @@ end
 
 _minixfs_read(stream, seg, dest, len, ret) far do
 ! Read block from file
-    var zone::1024, read_len, calc, zone_pos, fs[OBJ_FS], last_pos, last_size;
+    var zone::1024, read_len, calc, zone_pos, fs[OBJ_FS], last_zone, last_size;
     read_len := 0;
     ret[RET_OK] := FALSE;
     ret[RET_VALUE] := 0;
@@ -1405,10 +1507,10 @@ _minixfs_read(stream, seg, dest, len, ret) far do
         t.stack(), 
         fs, 
         t.local(), 
-        t.fargetw(t.local(),FSList) + stream[STREAM_MINIXFS_FS], 
+        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
         OBJ_FS << 1
     );
-    last_pos := minixfs_last_zone_pos(fs, stream[STREAM_MINIXFS_ID]);
+    last_zone := minixfs_last_zone_pos(fs, stream[STREAM_MINIXFS_ID]);
     last_size := minixfs_last_zone_size(fs, stream[STREAM_MINIXFS_ID]);
     while
     (
@@ -1421,12 +1523,17 @@ _minixfs_read(stream, seg, dest, len, ret) far do
         )
     )
     do
+        if(stream[STREAM_MINIXFS_POS] >= 1024) do
+            stream[STREAM_MINIXFS_ZONE] := stream[STREAM_MINIXFS_ZONE]+1;
+            stream[STREAM_MINIXFS_POS] := stream[STREAM_MINIXFS_POS]-1024;
+        end
         zone_pos := stream[STREAM_MINIXFS_POS];
         calc := 1024 - zone_pos;
-        if(last_pos = zone_pos)do
+        if(last_zone = stream[STREAM_MINIXFS_ZONE])do
             calc := last_size - zone_pos;
             if(calc < 0) calc := 0; 
         end
+        if(last_zone < stream[STREAM_MINIXFS_ZONE]) return;
         ie(len > calc)do
             t.farcopy(seg, dest + read_len, t.stack(), zone + zone_pos, calc);
             read_len := read_len + calc;
@@ -1436,6 +1543,11 @@ _minixfs_read(stream, seg, dest, len, ret) far do
         else do
             t.farcopy(seg, dest + read_len, t.stack(), zone + zone_pos, len);
             read_len := read_len + len;
+            stream[STREAM_MINIXFS_POS] := stream[STREAM_MINIXFS_POS] + len;
+            if(stream[STREAM_MINIXFS_POS] >= 1024) do
+                stream[STREAM_MINIXFS_ZONE] := stream[STREAM_MINIXFS_ZONE]+1;
+                stream[STREAM_MINIXFS_POS] := stream[STREAM_MINIXFS_POS]-1024;
+            end
             leave;
         end
     end
@@ -1466,14 +1578,14 @@ _minixfs_close(stream, ret) far do
         t.stack(), 
         fs, 
         t.local(), 
-        t.fargetw(t.local(),FSList) + stream[STREAM_MINIXFS_FS], 
+        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
         OBJ_FS << 1
     );
     fs[MINIXFS_OPENED_COUNT] := fs[MINIXFS_OPENED_COUNT] - 1;
     t.farcopy
     (
         t.local(), 
-        t.fargetw(t.local(),FSList) + stream[STREAM_MINIXFS_FS], 
+        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
         t.stack(), 
         fs, 
         OBJ_FS << 1
@@ -1503,14 +1615,14 @@ _minixfs_open(item, stream, ret) far do
         t.stack(), 
         fs, 
         t.local(), 
-        t.fargetw(t.local(),FSList) + stream[STREAM_MINIXFS_FS], 
+        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
         OBJ_FS << 1
     );
     fs[MINIXFS_OPENED_COUNT] := fs[MINIXFS_OPENED_COUNT] + 1;
     t.farcopy
     (
         t.local(), 
-        t.fargetw(t.local(),FSList) + stream[STREAM_MINIXFS_FS], 
+        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
         t.stack(), 
         fs, 
         OBJ_FS << 1
@@ -1671,9 +1783,14 @@ int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
     stream_writes(StreamErr, "]\r\n");
 end
 
+decl banner(0);
+
 int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! HUSIS API (DS,ES,SS,SP from Application)
-    int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
+    ie(ax = 1) ! Clear and print banner
+        banner();
+    else
+        int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     return 0;
 end
 
@@ -1684,33 +1801,36 @@ end
 
 int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! DOS API (DS,ES,SS,SP from Application)
-    var func, al, preserve, tmp[OBJ_STREAM];
+    var func, al, preserve, tmp[OBJ_STREAM], tmp_ptr;
     func := ax >> 8;
     al := ax & 0xff;
     ie(func = 0x40) do ! DOS WRITE
         ie(bx = 1) do ! SYSOUT
-            t.farcopy(ds, tmp, t.local(), StreamOut, OBJ_STREAM<<1);
+            tmp_ptr := t.fargetw(t.local(), @StreamOut);
+            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
             ! Copy Kernel Stream object to Application memory
             stream_write(tmp, dx, cx);
-            t.farcopy(t.local(), StreamOut, ds, tmp, OBJ_STREAM<<1);
+            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
         end
         else ie(bx = 2) do ! SYSERR
-            t.farcopy(ds, tmp, t.local(), StreamErr, OBJ_STREAM<<1);
+            tmp_ptr := t.fargetw(t.local(), @StreamErr);
+            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
             ! Copy Kernel Stream object to Application memory
             preserve := tmp[TERM_COLORS];
             tmp[TERM_COLORS] := 4 << 8;
             stream_write(tmp, dx, cx);
             tmp[TERM_COLORS] := preserve;
-            t.farcopy(t.local(), StreamErr, ds, tmp, OBJ_STREAM<<1);
+            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
         end
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
     else ie(func = 0x3f) do ! DOS READ
         ie(bx = 0) do ! SYSIN
-            t.farcopy(ds, tmp, t.local(), StreamIn, OBJ_STREAM<<1);
+            tmp_ptr := t.fargetw(t.local(), @StreamIn);
+            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
             ! Copy Kernel Stream object to Application memory
-            stream_read(StreamIn, dx, cx);
-            t.farcopy(t.local(), StreamIn, ds, tmp, OBJ_STREAM<<1);
+            stream_read(tmp, dx, cx);
+            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
         end
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
@@ -1718,11 +1838,122 @@ int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 end
 
 ! ==========================================================================
+! Process Management
+! ==========================================================================
+
+const TOTAL_PROCESS = 32;
+
+const STATUS_PROCESS_EMPTY = 0;
+const STATUS_PROCESS_RUNING = 1;
+const STATUS_PROCESS_WAINTING = 2;
+
+struct OBJ_PROCESS =
+! Process
+    PROCESS_ID,
+    PROCESS_PARENT_ID,
+    PROCESS_SEG,
+    PROCESS_SP,
+    PROCESS_IP,
+    PROCESS_STATUS,
+    PROCESS_WAITING_ID;
+
+var ProcessList[TOTAL_PROCESS], ProcessData[TOTAL_PROCESS * OBJ_PROCESS];
+var ProcessCurrent, ProcessKernel;
+
+new_process(seg, sp, ip) do
+    var i, ptr;
+    for(i=1,TOTAL_PROCESS) do
+        ptr := t.fargetw(t.local(), ProcessList) + (i * (OBJ_PROCESS<<1));
+        if
+        (
+            t.fargetw(t.local(), ptr + (PROCESS_STATUS<1)) = 
+            STATUS_PROCESS_EMPTY
+        ) 
+        do
+            t.farsetw(t.local(), ptr + (PROCESS_SEG<1), seg);
+            t.farsetw(t.local(), ptr + (PROCESS_IP<1), ip);
+            t.farsetw(t.local(), ptr + (PROCESS_SP<1), sp);
+            t.farsetw(t.local(), ptr + (PROCESS_STATUS<1), STATUS_PROCESS_RUNING);
+            return i;
+        end
+    end
+    return 0;
+end
+
+process_init() do
+    var i;
+    for(i=0,TOTAL_PROCESS) do
+        ProcessList[i] := @ProcessData[OBJ_PROCESS * i];
+        ProcessList[i][PROCESS_ID] := i;
+        ProcessList[i][PROCESS_STATUS] := STATUS_PROCESS_EMPTY;
+    end
+    ProcessKernel := new_process(t.local(), 0xfffe, 0);
+    ProcessCurrent := ProcessKernel;
+end
+
+! ==========================================================================
+! COM File Support
+! ==========================================================================
+
+com_exec(stream, args) do
+! Load COM file to RAM and Execute
+    var temp::128, seg, i, pos, block, process, args_size, exec, sp, ip;
+! TODO: Implement multiple process
+    seg := mem_alloc_seg(1);
+    if(seg = 0) return %1;
+    ! Load COM file
+    pos := 256;
+    block := 0;
+    i := 128;
+    while(i = 128) do
+        i := stream_read(stream, temp, 128);
+        t.farcopy(seg, pos, t.stack(), temp, i);
+        pos := pos + i;
+    end
+    t.farfill(seg, 0, 0, 255);
+    t.farsetw(seg, 0xfffe, 0);
+    args_size := str_len(args);
+    if(args_size > 120) args_size := 120;
+    t.farcopy(seg, 0x81, t.stack(), args, args_size);
+    t.farsetb(seg, 0x80, args_size);
+    t.farsetb(seg, 0x81 + args_size, 0xd);
+    exec := FALSE;
+    sp := t.stackptr();
+    ip := t.instrptr();
+    ie(exec)do
+        ! Exit of COM Program
+    end
+    else do
+        ! Call COM Program
+        t.jmpstack(seg, 0xfffe, 256);
+    end
+
+end
+
+
+! ==========================================================================
 ! Main
 ! ==========================================================================
 
 var Int79Ant[T3X.PTRSIZE], Int20Ant[T3X.PTRSIZE], Int21Ant[T3X.PTRSIZE];
 ! Previous Interrupt Handlers
+
+banner() do
+    t.rwrites(T3X.SYSOUT, t.local(), "\ec\ef03HUSIS \ef04v");
+    t.writenum(T3X.SYSOUT, VERSION);
+    t.rwrites(T3X.SYSOUT, t.local(), ".");
+    t.writenum(T3X.SYSOUT, SUB_VERSION);
+    t.rwrites(T3X.SYSOUT, t.local(), " R");
+    t.writenum(T3X.SYSOUT, REVISION);
+    t.rwriteln(T3X.SYSOUT, t.local(), "\ef07");
+    t.rwriteln(T3X.SYSOUT, t.local(), 
+        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
+    if(Mode = MODE_DOS_APP) 
+        t.rwrites(T3X.SYSERR, t.local(), "[ DOS Application Mode] ");
+    t.rwriteln(T3X.SYSOUT, t.local(),"Build using \ef03T3X/86\ef07 Compiler");
+    t.rwriteln(T3X.SYSOUT, t.local(), "License: 3-Clause BSD");
+    t.rwrites(T3X.SYSOUT, t.local(), "\er80=");
+end
 
 shutdown() do
 ! Shutdown HUSIS
@@ -1749,8 +1980,8 @@ end
 
 do
 ! Main routine, initialize operating system
-    var arg::15, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
-    var disk, i, item[OBJ_ITEM], tmp::128, stream[OBJ_STREAM];
+    var arg::64, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
+    var disk, i, item[OBJ_ITEM], stream[OBJ_STREAM];
     ! Replace INT 20(DOS API), 21(DOS API) and INT 79(HUSIS API)
     int_set(Int79Ant, 0x79, @int79);
     int_set(Int21Ant, 0x20, @int20);
@@ -1768,26 +1999,10 @@ do
     disk_init();
     fs_init();
     minixfs_init();
+    process_init();
 
     ! HUSIS Banner using DOS API implemented by HUSIS
-    t.writes(T3X.SYSOUT, "\ec\ef03HUSIS \ef04v");
-    t.writenum(T3X.SYSOUT, VERSION);
-    t.writes(T3X.SYSOUT, ".");
-    t.writenum(T3X.SYSOUT, SUB_VERSION);
-    t.writes(T3X.SYSOUT, " R");
-    t.writenum(T3X.SYSOUT, REVISION);
-    t.writes(T3X.SYSOUT, "\ef07 [RAM: ");
-    t.writenum(T3X.SYSOUT, mem_total_kib());
-    t.writes(T3X.SYSOUT, " KiB]");
-    t.writes(T3X.SYSOUT, " [Application RAM: ");
-    t.writenum(T3X.SYSOUT, mem_calc_free_kib());
-    t.writeln(T3X.SYSOUT, " KiB]");
-    t.writeln(T3X.SYSOUT, 
-        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
-    t.writeln(T3X.SYSOUT, "Build using \ef03T3X/86\ef07 Compiler");
-    t.writeln(T3X.SYSOUT, "License: 3-Clause BSD");
-    if(Mode = MODE_DOS_APP) t.writeln(T3X.SYSERR, "DOS Application Mode");
-    t.writes(T3X.SYSOUT, "\er80=");
+    banner();
 
     ! Parse arguments: DISK CILINDERS HEADS SECTORS
     arg_ok := TRUE;
@@ -1819,42 +2034,19 @@ do
         ! Mount disk using MinixFS
         if(\minixfs_mount(disk)) fatal_error("Disk corrupted.");
         t.writeln(T3X.SYSOUT, " [ OK ]");
-!
-! TODO: Implement:
-!       - Read autoexec file
-!       - Read and execute Command Prompt using parameters on config file
-!
+        if(t.getarg(5, arg, 64) = 0) 
+            fatal_error(
+            "Shell missing. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH");
+        t.writes(T3X.SYSOUT, "Loading ");
+        t.writeln(T3X.SYSOUT, arg);
+        if(\fs_open_file(arg, stream)) fatal_error("Shell file not found.");
+        com_exec(stream, "");
     end
     else do
         fatal_error(
-        "Disk parameters incomplete. Use: DISK_ID CILINDERS HEADS SECTORS"
+"Disk parameters incomplete. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH"
         );
     end
-
-    t.writeln(T3X.SYSOUT, "FILE SYSTEM TEST: LISTING ROOT DIR");
-    i := fs_first(0, 0, item);
-    while(i) do
-        t.writes(T3X.SYSOUT, "  ");
-        ie(item[ITEM_TYPE] = TYPE_DIRECTORY)
-            t.writes(T3X.SYSOUT, "[DIR ] ");
-        else ie(item[ITEM_TYPE] = TYPE_FILE)
-            t.writes(T3X.SYSOUT, "[FILE] ");
-        else
-            t.writes(T3X.SYSOUT, "[????] ");
-        t.writenum(T3X.SYSOUT, item[ITEM_ID]);
-        t.writes(T3X.SYSOUT, ": ");
-        t.writeln(T3X.SYSOUT, item[ITEM_NAME]);
-        if(str_equal(item[ITEM_NAME], "autoexec")) do
-            t.writes(T3X.SYSOUT, "  READ    : \q\ef04");
-            fs_open(item, stream);
-            i := stream_read(stream, tmp, 128);
-            stream_close(stream);
-            t.write(T3X.SYSOUT, tmp, i);
-            t.writeln(T3X.SYSOUT, "\ef07\q");
-        end
-        i := fs_next(0, item);
-    end
-
 
 
     t.writes(T3X.SYSERR, "\ex00\ey24System Halted. Press ENTER to shutdown.");

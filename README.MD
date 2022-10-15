@@ -3,9 +3,9 @@
 This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
 
-*Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.2.0-alpha)
+*Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.4.0-alpha)
 
-![alt first version](SCREENS/V0_3_0.PNG)
+![alt first version](SCREENS/V0_4_0.PNG)
 
 ## Minimum Requiriments
 
@@ -73,9 +73,11 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [x] Terminal I/O using Stream
 - [x] BIOS Disk I/O using Stream
 - [x] File System Infrastructure
-- [ ] Minix File System
-- [ ] Load and Execute Application from File
-- [ ] COM Executable Support (ORG 0x100 ARGS 0x81 STACK 0xffff SIZE 64 KiB)
+- [x] Minix File System - Read
+- [ ] Minix File System - Write
+- [x] Load and Execute Application from File
+- [ ] Capture return and exit application
+- [x] COM Executable Support (ORG 0x100 ARGS 0x81 STACK 0xffff SIZE 64 KiB)
 - [ ] PRG Executable Support (ORG 0x800 ARGS 0x0 STACK 0x800 SIZE Dinamic)
 - [ ] Serial I/O using Stream
 - [ ] Parallel Port I/O using Stream
@@ -85,7 +87,8 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 - [x] Implement Standard Output INT 0x21 AH 0x40 BX 1
 - [x] Implement Standard Error Output INT 0x21 AH 0x40 BX 2
-- [x] Implement Standard Input
+- [x] Implement Standard Input INT 0x21 AH 0x3f BX 0
+- [ ] Implement Exit
 - [ ] Implement File Open
 - [ ] Implement File Close
 - [ ] Implement File First Item on Directory
@@ -113,7 +116,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 ### Applications
 
-- [ ] Command Prompt
+- [x] Command Prompt
 - [ ] Text Editor
 - [ ] BASIC Interpreter
 - [ ] Custom T3X/86 with PRG Support (Minimal RAM usage, fixed 2 KiB Stack)
@@ -146,3 +149,13 @@ HUSIS v0.3 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 - MinixFS Open/Close/Read implemented
 
 ![alt first version](SCREENS/V0_3_0.PNG)
+
+
+HUSIS v0.4 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.4.0-alpha)
+
+- COM File Loader (Prototype)
+- Fist Shell (Prototype)
+
+![alt first version](SCREENS/V0_4_0_LOADING.PNG)
+
+![alt first version](SCREENS/V0_4_0.PNG)

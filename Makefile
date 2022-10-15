@@ -17,12 +17,12 @@ img:
 
 img_copy:
 	sudo cp HUSIS.COM TMP/husis
-	sudo cp AUTOEXEC TMP/autoexec
 	sudo mkdir TMP/Programs
 	sudo mkdir TMP/Documents
 	sudo mkdir TMP/Library
 	sudo mkdir TMP/System
-	sudo cp PROGS/SHELL.COM TMP/Programs/Shell.com
+	sudo cp AUTOEXEC TMP/System/autoexec
+	sudo cp PROGS/SHELL.COM TMP/System/Shell.com
 	sudo cp BIN/T.COM TMP/Programs/T.com
 	sudo cp BIN/S86.COM TMP/Programs/S86.com
 	sudo cp BIN/OSASMCOM.COM TMP/Programs/OSAsmCOM.com
@@ -32,5 +32,8 @@ img_copy:
 test: all img
 	dosbox -C "BOOT 1440.IMG -l A"
 
+debug: all img
+	bochs
+
 testdos: all img
-	dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "C:\HUSIS 000 80 2 18"
+	dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "C:\HUSIS 000 80 2 18 /System/Shell.com"
