@@ -3,7 +3,7 @@
 This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
 
-*Current release*: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.4.0-alpha)
+*Current release*: [Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.4.0-alpha)
 
 ![alt first version](SCREENS/V0_4_0.PNG)
 
@@ -15,7 +15,7 @@ Floppy Disk
 
 CGA/EGA/VGA Video Card (MDA Partial Support, in implementation)
 
-128 KiB RAM (Standalone) or 256 KiB RAM (DOS App mode)
+256 KiB RAM (Standalone) or 384 KiB RAM (DOS App mode)
 
 ## How to use
 
