@@ -36,6 +36,12 @@ char_is_upper(c) return (c >= 'A') & (c <= 'Z');
 char_is_lower(c) return (c >= 'a') & (c <= 'z');
 char_is_alpha(c) return char_is_lower(c) | char_is_upper(c);
 char_is_alphanum(c) return char_is_alpha(c) | char_is_num(c);
+char_from_hex(c) do
+    ie(char_is_lower(c)) return c - 'a' + 10;
+    else ie(char_is_upper(c)) return c - 'A' + 10;
+    else if(char_is_num(c)) return c - '0';
+    return 0;
+end
 
 str_len(txt) 
 ! Get ASCIZ string length
@@ -188,7 +194,11 @@ struct OBJ_STREAM =
     STREAM_AUX3,
     STREAM_AUX4,
     STREAM_AUX5,
-    STREAM_AUX6;
+    STREAM_AUX6,
+    STREAM_AUX7,
+    STREAM_AUX8,
+    STREAM_AUX9,
+    STREAM_AUX10;
 
 var StreamIO[OBJ_STREAM], StreamOut, StreamIn, StreamErr;
 ! Standard Stream I/O
@@ -222,6 +232,10 @@ do
     stream[STREAM_AUX4] := 0;
     stream[STREAM_AUX5] := 0;
     stream[STREAM_AUX6] := 0;
+    stream[STREAM_AUX7] := 0;
+    stream[STREAM_AUX8] := 0;
+    stream[STREAM_AUX9] := 0;
+    stream[STREAM_AUX10] := 0;
 end
 
 buffer_set(stream, seg, ptr, len) do
@@ -361,6 +375,7 @@ const TERM_COLORS = STREAM_AUX3;
 const TERM_CMD = STREAM_AUX4;
 const TERM_CMD_POS = STREAM_AUX5;
 const TERM_VALUE = STREAM_AUX6;
+const TERM_VALUE_B = STREAM_AUX7;
 
 term_cls(stream) do
 ! Clear screen
@@ -369,7 +384,7 @@ term_cls(stream) do
     stream[TERM_Y] := 0;
     stream[TERM_X] := 0;
     stream[STREAM_PTR_BUFFER] := 0;
-    t.farfill(stream[STREAM_SEG_BUFFER], 0, 0, 80*25*2);
+    t.farfillw(stream[STREAM_SEG_BUFFER], 0, stream[TERM_COLORS]|' ', 80*25);
 end
 
 term_calc_pos(stream, x, y) do
@@ -387,14 +402,14 @@ term_calc_pos(stream, x, y) do
     end
 end
 
-term_colors_set(stream, front, back) do
+term_colors_set(stream, fore, back) do
 ! Set new colors to output
-    stream[TERM_COLORS] := (back << 12) | (front << 8);
+    stream[TERM_COLORS] := (back << 12) | (fore << 8);
 end
 
-term_color_front(stream, front) do
-! Set front color
-    stream[TERM_COLORS] := (stream[TERM_COLORS] & 0xf000) | (front << 8);
+term_color_fore(stream, fore) do
+! Set fore color
+    stream[TERM_COLORS] := (stream[TERM_COLORS] & 0xf000) | (fore << 8);
 end
 
 term_color_back(stream, back) do
@@ -407,13 +422,15 @@ term_write_char(stream, c) do
 !
 ! Special escape commands:
 ! \ec       = Clear screen
+! \el       = Clear current line and set x = 0
 ! \ex00     = Set X position (00-80)
 ! \ey00     = Set Y position (00-25)
-! \ef00     = Set front color (00-15)
+! \ef00     = Set fore color (00-15)
 ! \eb00     = Set back color (00-15)
 ! \er00C    = Repeat C character 00 times (00-99)
+! \eR00HH   = Repeat HH(Hex) character 00 times (00-FF)
 !
-    var i;
+    var i, y;
     if(c = '\e') do
     stream[TERM_CMD_POS] := 1;
     return;
@@ -424,11 +441,18 @@ term_write_char(stream, c) do
             stream[TERM_CMD_POS] := 0;
             stream[TERM_CMD] := c;
             ie(c = 'c') term_cls(stream);
+            else ie(c = 'l') do
+                y := stream[TERM_Y];
+                term_calc_pos(stream, 0, y);
+                for(i=0,80) term_write_char(stream, ' ');
+                term_calc_pos(stream, 0, y);
+            end            
             else ie(c = 'f') stream[TERM_CMD_POS] := 2;
             else ie(c = 'b') stream[TERM_CMD_POS] := 2;
             else ie(c = 'x') stream[TERM_CMD_POS] := 2;
             else ie(c = 'y') stream[TERM_CMD_POS] := 2;
             else ie(c = 'r') stream[TERM_CMD_POS] := 2;
+            else ie(c = 'R') stream[TERM_CMD_POS] := 2;
             else stream[TERM_CMD_POS] := 0;
         end 
         else ie(stream[TERM_CMD_POS] = 2) do
@@ -446,16 +470,30 @@ term_write_char(stream, c) do
                 term_calc_pos(stream, stream[TERM_X], stream[TERM_VALUE]);
             else ie(stream[TERM_CMD] = 'r') 
                 stream[TERM_CMD_POS] := 4;
+            else ie(stream[TERM_CMD] = 'R') 
+                stream[TERM_CMD_POS] := 4;
             else ie(stream[TERM_CMD] = 'f') 
-                term_color_front(stream, stream[TERM_VALUE]);
+                term_color_fore(stream, stream[TERM_VALUE]);
             else ie(stream[TERM_CMD] = 'b') 
                 term_color_back(stream, stream[TERM_VALUE]);
             else stream[TERM_CMD_POS] := 0;
         end
         else ie(stream[TERM_CMD_POS] = 4) do
             stream[TERM_CMD_POS] := 0;
-            if(stream[TERM_CMD] = 'r') 
+            ie(stream[TERM_CMD] = 'r') 
                 for(i=0,stream[TERM_VALUE]) term_write_char(stream, c);
+            else if(stream[TERM_CMD] = 'R') do
+                stream[TERM_VALUE_B] := char_from_hex(c) << 4;
+                stream[TERM_CMD_POS] := 5;
+            end 
+        end
+        else ie(stream[TERM_CMD_POS] = 5) do
+            stream[TERM_CMD_POS] := 0;
+            if(stream[TERM_CMD] = 'R') do
+                stream[TERM_VALUE_B] := stream[TERM_VALUE_B]|char_from_hex(c);
+                for(i=0,stream[TERM_VALUE]) 
+                    term_write_char(stream, stream[TERM_VALUE_B]);
+            end 
         end
         else stream[TERM_CMD_POS] := 0;
         return;
@@ -1783,12 +1821,17 @@ int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
     stream_writes(StreamErr, "]\r\n");
 end
 
-decl banner(0);
+decl banner(1);
+decl shutdown(0);
 
 int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! HUSIS API (DS,ES,SS,SP from Application)
     ie(ax = 1) ! Clear and print banner
-        banner();
+        banner(bx);
+    else ie(ax = 2) do
+        t.setsegs(t.local(), 0xff00, 0xff00);
+        shutdown();
+    end
     else
         int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     return 0;
@@ -1938,21 +1981,27 @@ end
 var Int79Ant[T3X.PTRSIZE], Int20Ant[T3X.PTRSIZE], Int21Ant[T3X.PTRSIZE];
 ! Previous Interrupt Handlers
 
-banner() do
-    t.rwrites(T3X.SYSOUT, t.local(), "\ec\ef03HUSIS \ef04v");
+banner(cls) do
+    t.rwrites(T3X.SYSOUT, t.local(), "\ef07\eb00");
+    ie(cls)
+        t.rwrites(T3X.SYSOUT, t.local(), "\ec");
+    else
+        t.rwrites(T3X.SYSOUT, t.local(), 
+            "\ex00\ey00\r80 \r80 \r80 \r80 \ey00\ex00");
+    t.rwrites(T3X.SYSOUT, t.local(), "\ef03HUSIS \ef04v");
     t.writenum(T3X.SYSOUT, VERSION);
     t.rwrites(T3X.SYSOUT, t.local(), ".");
     t.writenum(T3X.SYSOUT, SUB_VERSION);
     t.rwrites(T3X.SYSOUT, t.local(), " R");
     t.writenum(T3X.SYSOUT, REVISION);
     t.rwriteln(T3X.SYSOUT, t.local(), "\ef07");
-    t.rwriteln(T3X.SYSOUT, t.local(), 
-        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
     if(Mode = MODE_DOS_APP) 
         t.rwrites(T3X.SYSERR, t.local(), "[ DOS Application Mode] ");
     t.rwriteln(T3X.SYSOUT, t.local(),"Build using \ef03T3X/86\ef07 Compiler");
+    t.rwriteln(T3X.SYSOUT, t.local(), 
+        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
     t.rwriteln(T3X.SYSOUT, t.local(), "License: 3-Clause BSD");
-    t.rwrites(T3X.SYSOUT, t.local(), "\er80=");
+    t.rwrites(T3X.SYSOUT, t.local(), "\eR80CD");
 end
 
 shutdown() do
@@ -2002,7 +2051,7 @@ do
     process_init();
 
     ! HUSIS Banner using DOS API implemented by HUSIS
-    banner();
+    banner(TRUE);
 
     ! Parse arguments: DISK CILINDERS HEADS SECTORS
     arg_ok := TRUE;

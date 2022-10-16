@@ -22,7 +22,9 @@ img_copy:
 	sudo mkdir TMP/Library
 	sudo mkdir TMP/System
 	sudo cp AUTOEXEC TMP/System/autoexec
-	sudo cp PROGS/SHELL.COM TMP/System/Shell.com
+	sudo cp PROGS/HELLOPRG.PRG TMP/Programs/Hello1.prg
+	sudo cp PROGS/HELLOCOM.COM TMP/Programs/Hello2.com
+	sudo cp SYSTEM/SHELL.COM TMP/System/Shell.com
 	sudo cp BIN/T.COM TMP/Programs/T.com
 	sudo cp BIN/S86.COM TMP/Programs/S86.com
 	sudo cp BIN/OSASMCOM.COM TMP/Programs/OSAsmCOM.com

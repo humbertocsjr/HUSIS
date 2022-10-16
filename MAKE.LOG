@@ -11,7 +11,9 @@ Old-School Assembler para BIOS v1.17 [PT-BR]
  Copyright (c) 2019-2022, Humberto Costa dos Santos Junior
 
  Incluindo arquivo BOOT.S
+-= Hello World PRG =-
+-= Hello World COM =-
 -= Shell =-
-Text = 2855, Data = 622, Symbols = 67, Nlist = 670, Labels = 50
+Text = 4531, Data = 622, Symbols = 84, Nlist = 820, Labels = 119
 -= HUSIS Kernel =-
-Text = 27298, Data = 7600, Symbols = 316, Nlist = 3885, Labels = 551
+Text = 28301, Data = 7736, Symbols = 325, Nlist = 3991, Labels = 580

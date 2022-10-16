@@ -3,6 +3,14 @@
 ! 3-Clause BSD license
 ! Text user interface for HUSIS
 
+
+const VERSION = 0;
+const SUB_VERSION = 1;
+const REVISION = 0;
+
+const TRUE = %1;
+const FALSE = 0;
+
 ! ==========================================================================
 ! String/Character
 ! ==========================================================================
@@ -114,18 +122,114 @@ t.writenum(file, value) do
     t.writec(file, tmp + '0'); 
 end
 
+print(str) t.writes(T3X.SYSOUT, str);
+println(str) t.writeln(T3X.SYSOUT, str);
+printnum(value) t.writenum(T3X.SYSOUT, value);
+
+! ==========================================================================
+! Main
+! ==========================================================================
+
+split_cmd(line, len, cmd, cmd_len, args, args_len) do
+    var i, step, pos;
+    cmd::0 := 0;
+    args::0 := 0;
+    step := 0;
+    pos := 0;
+    for(i=0,len) do
+        if (line::i = 0) leave;
+        ie (step = 0) do
+            if (pos >= cmd_len) leave;
+            if (line::i = ' ') do
+                step := 1;
+                pos := 0;
+                loop;
+            end
+            cmd::pos := line::i;
+            pos := pos + 1;
+            cmd::pos := 0;
+        end
+        else do
+            if (pos = 0) if(line::i = ' ') loop;
+            if (pos >= args_len) leave;
+            args::pos := line::i;
+            pos := pos + 1;
+            args::pos := 0;
+        end
+    end
+end
+
+banner(cls)do
+    t.int86ax(0x79, 1,cls,0,0 ,0,0); ! Clear screen and print banner
+end
+
+cmd_ver(args)do
+    banner(TRUE);
+    print("\ef03HUSIS Shell\ef04 v");
+    printnum(VERSION);
+    print(".");
+    printnum(SUB_VERSION);
+    print(" R");
+    printnum(REVISION);
+    println("\ef07");
+    println("Copyright (c) 2022, Humberto Costa dos Santos Junior");
+    println("License: 3-Clause BSD");
+end
+
+cmd_shutdown(args)do
+    t.int86ax(0x79, 2,0,0,0 ,0,0);
+end
+
+cmd_help(args)do
+    banner(TRUE);
+    println("Commands:");
+    println("");
+    println("  help         = Show this screen");
+    println("  cls          = Clear screen");
+    println("  ver          = Show version");
+    println("  shutdown     = Shutdown HUSIS");
+    println("  echo         = Print text on screen");
+end
+
+exec_cmd(cmd, args)do
+    if(str_len(cmd) > 0)do
+        ie(str_equal(cmd, "cls")) do
+            t.writeln(T3X.SYSOUT, "\ec");
+        end
+        else ie(str_equal(cmd, "echo")) do
+            t.writes(T3X.SYSOUT, "\el");
+            t.writeln(T3X.SYSOUT, args);
+        end
+        else ie(str_equal(cmd, "help")) cmd_help(args);
+        else ie(str_equal(cmd, "ver")) cmd_ver(args);
+        else ie(str_equal(cmd, "shutdown")) cmd_shutdown(args);
+        else ie(str_equal(cmd, "?")) cmd_help(args);
+        else do 
+            t.writes(T3X.SYSERR, "Command \q");
+            t.writes(T3X.SYSERR, cmd);
+            t.writeln(T3X.SYSERR, "\q not found");
+        end
+    end
+end
+
 ! ==========================================================================
 ! Main
 ! ==========================================================================
 
 do
-    var line::128;
+    var line::128, cmd::20, args::128;
+    banner(TRUE); ! Clear screen and print banner
     while(%1) do
-        t.int86ax(0x79, 1,0,0,0 ,0,0); ! Clear screen and print banner
-        t.writes(T3X.SYSOUT, "\ex00\ey05\ef03Command......: \ef07");
-        t.read(T3X.SYSIN, line, 128);
+        banner(FALSE); ! Print banner
         t.writes(T3X.SYSOUT, 
-            "\ex00\ey05\ef04\er80 \ey05\ex00Press ENTER to continue\ef07");
-        t.read(T3X.SYSIN, line, 0);
+            "\ex00\ey03\er80 \ex00\ey03\ef03Command......: \ef07");
+        t.read(T3X.SYSIN, line, 80-16);
+        t.writes(T3X.SYSOUT, "\ex00\ey05");
+        split_cmd(line, 128, cmd, 20, args, 128);
+        t.writes(T3X.SYSOUT, 
+            "\ef03Executed.....: \ef07");
+        t.writeln(T3X.SYSOUT, 
+            line);
+        exec_cmd(cmd, args);
     end
 end
