@@ -14,6 +14,6 @@ Old-School Assembler para BIOS v1.17 [PT-BR]
 -= Hello World PRG =-
 -= Hello World COM =-
 -= Shell =-
-Text = 4531, Data = 622, Symbols = 84, Nlist = 820, Labels = 119
+Text = 4526, Data = 622, Symbols = 84, Nlist = 820, Labels = 119
 -= HUSIS Kernel =-
 Text = 28301, Data = 7736, Symbols = 325, Nlist = 3991, Labels = 580

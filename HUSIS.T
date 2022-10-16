@@ -8,7 +8,7 @@
 !
 
 const VERSION = 0;
-const SUB_VERSION = 4;
+const SUB_VERSION = 5;
 const REVISION = 0;
 
 const TRUE = %1;

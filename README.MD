@@ -2,10 +2,13 @@
 
 This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
+## Changes in current release
 
-*Current release*: [Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.4.0-alpha)
+- Shell commands prototype
 
-![alt first version](SCREENS/V0_4_0.PNG)
+[Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.5.0-alpha)
+
+![alt first version](SCREENS/V0_5_0.PNG)
 
 ## Terminal Implementation
 
@@ -163,3 +166,10 @@ HUSIS v0.4 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 ![alt first version](SCREENS/V0_4_0_LOADING.PNG)
 
 ![alt first version](SCREENS/V0_4_0.PNG)
+
+
+HUSIS v0.5 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.5.0-alpha)
+
+- Shell commands prototype
+
+![alt first version](SCREENS/V0_5_0.PNG)

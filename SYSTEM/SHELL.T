@@ -182,13 +182,13 @@ end
 
 cmd_help(args)do
     banner(TRUE);
-    println("Commands:");
+    println("Commands.....:");
     println("");
-    println("  help         = Show this screen");
-    println("  cls          = Clear screen");
-    println("  ver          = Show version");
-    println("  shutdown     = Shutdown HUSIS");
-    println("  echo         = Print text on screen");
+    println("  help       : Show this screen");
+    println("  cls        : Clear screen");
+    println("  ver        : Show version");
+    println("  shutdown   : Shutdown HUSIS");
+    println("  echo       : Print text on screen");
 end
 
 exec_cmd(cmd, args)do
