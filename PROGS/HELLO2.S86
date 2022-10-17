@@ -1,0 +1,49 @@
+; HUSIS Hello World in PRG format
+; Humberto Costa dos Santos Junior, 2022
+; 3-Clause BSD license
+; Simple database used by HUSIS Applications
+
+.text $100
+jmp start
+
+msg:
+    db "Hello World!",0
+
+start:
+    ; Read Process ID
+    mov ax, 4
+    int $79
+    ; Print number
+    mov bx, ax
+    mov ax, 12
+    int $79
+
+    ; Read Parent ID
+    mov ax, 5
+    int $79
+    ; Print number
+    mov bx, ax
+    mov ax, 12
+    int $79
+
+    ; Print string using HUSIS
+    mov ax, 10
+    mov bx, @msg
+    int $79
+
+    ; Read string using HUSIS
+    mov ax, 20
+    mov bx, @msg
+    mov cx, 12
+    int $79
+
+    ; Exit using HUSIS
+    mov ax, 0
+    int $79
+    
+infinite:
+    hlt
+    jmp infinite
+
+end:
+

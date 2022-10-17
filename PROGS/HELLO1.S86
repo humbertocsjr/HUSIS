@@ -1,0 +1,28 @@
+; HUSIS Hello World in PRG format
+; Humberto Costa dos Santos Junior, 2022
+; 3-Clause BSD license
+; Simple database used by HUSIS Applications
+
+.text $800
+; PRG Header
+db "HUSIS",0    ; Signature
+db 1            ; Version API
+dw @start       ; Start function
+dw @end         ; Size of Code Area
+dw 0            ; Size of Data Extended Area
+
+msg:
+    db "Hello World!",0
+
+start:
+    mov ax, $4000
+    mov bx, 0
+    mov dx, @msg
+    mov cx, 12
+    int $21
+infinite:
+    hlt
+    jmp infinite
+
+end:
+

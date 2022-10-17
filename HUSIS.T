@@ -47,11 +47,11 @@ str_len(txt)
 ! Get ASCIZ string length
     return t.memscan(txt, 0, 2048);
 
-str_copy(orig, dest) 
+str_copy(dest, orig) 
 ! Copy string contents to another
     t.memcopy(dest, orig, str_len(orig)+1);
 
-str_concat(orig, dest)
+str_concat(dest, orig)
 ! Concat string
     t.memcopy(@dest::str_len(dest), orig, str_len(orig)+1);
 
@@ -74,15 +74,39 @@ end
 str_to_num(str) return str_to_num2(str, 0);
 ! Convert string to number
 
+str_to_upper(str) do
+! Convert to upper case
+    var i;
+    i := 0;
+    while(str::i \= 0) do
+        if(char_is_lower(str::i)) do
+            str::i := str::i - 'a' + 'A';
+        end
+        i := i + 1;
+    end
+end
+
+str_to_lower(str) do
+! Convert to upper case
+    var i;
+    i := 0;
+    while(str::i \= 0) do
+        if(char_is_upper(str::i)) do
+            str::i := str::i - 'A' + 'a';
+        end
+        i := i + 1;
+    end
+end
+
 rstr_len(seg, txt) 
 ! Get ASCIZ string length from remote string
     return t.farscan(seg, txt, 0, 2048);
 
-rstr_copy(sego, orig, segd, dest) 
+rstr_copy(segd, dest, sego, orig) 
 ! Copy retmote string contents to another remote string 
     t.farcopy(segd, dest, sego, orig, rstr_len(sego, orig)+1);
 
-rstr_concat(sego, orig, segd, dest)
+rstr_concat(segd, dest, sego, orig)
 ! Concat remote strings
     t.farcopy(
         segd, 
@@ -117,17 +141,17 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 t.writes(file, str) t.write(file, str, str_len(str));
 ! Write string to file
 
-t.writeln(file, str) do
-! Write line string to file
-    t.write(file, str, str_len(str));
-    t.write(file, "\r\n", 2);
-end
-
 t.rwrites(file, seg, str) do
 ! Write string to file
     var tmp::128;
     t.farcopy(t.stack(), tmp, seg, str, 128);
     t.write(file, tmp, str_len(tmp));
+end
+
+t.writeln(file, str) do
+! Write line string to file
+    t.write(file, str, str_len(str));
+    t.rwrites(file, t.local(), "\r\n");
 end
 
 t.rwriteln(file, seg, str) do
@@ -738,7 +762,7 @@ mem_alloc(process, paras) do
         seg := mem_find_next(seg, 0);
     end
     if(seg = 0) return 0;
-    size := t.fargetb(seg, MCB_PARAGRAPHS_W);
+    size := t.fargetw(seg, MCB_PARAGRAPHS_W);
     if
         (
             ((size + 5) > paras) |
@@ -1043,7 +1067,7 @@ fs_first(fs, id, item) do
         t.stack(), 
         fsobj,
         t.local(), 
-        t.fargetw(t.local(),FSList) + (fs << 1), 
+        t.fargetw(t.local(),t.fargetw(t.local(),@FSList)) + (fs << 1), 
         OBJ_FS << 1
     );
     if(fsobj[FS_SEG] = 0) return FALSE;
@@ -1061,7 +1085,7 @@ fs_next(fs, item) do
         t.stack(), 
         fsobj,
         t.local(), 
-        t.fargetw(t.local(),FSList) + (fs << 1), 
+        t.fargetw(t.local(),t.fargetw(t.local(),@FSList)) + (fs << 1), 
         OBJ_FS << 1
     );
     if(fsobj[FS_SEG] = 0) return FALSE;
@@ -1100,7 +1124,7 @@ fs_open_file(address, stream) do
         t.stack(), 
         fsobj,
         t.local(), 
-        t.fargetw(t.local(),FSList) + (fs << 1), 
+        t.fargetw(t.local(),t.fargetw(t.local(),@FSList)) + (fs << 1), 
         OBJ_FS << 1
     );
     if(fsobj[FS_STATUS] \= STATUS_FS_MOUNTED) return FALSE;
@@ -1114,6 +1138,8 @@ fs_open_file(address, stream) do
             ok := FALSE;
             j := fs_first(fsobj[FS_ID], dir, item);
             while(j) do
+                str_to_lower(name);
+                str_to_lower(item[ITEM_NAME]);
                 if(str_equal(name, item[ITEM_NAME])) do
                     ok := TRUE;
                     dir := item[ITEM_ID];
@@ -1137,6 +1163,8 @@ fs_open_file(address, stream) do
     ok := FALSE;
     j := fs_first(fsobj[FS_ID], dir, item);
     while(j) do
+        str_to_lower(name);
+        str_to_lower(item[ITEM_NAME]);
         if(str_equal(name, item[ITEM_NAME])) do
             ok := TRUE;
             dir := item[ITEM_ID];
@@ -1182,166 +1210,200 @@ var MinixFSBuffer::5120,
 
 minixfs_read_zone(disk, position, dest) do
 ! Read zones (1024 bytes disk block) using 512 bytes physical blocks
+    var fsbuffer, fsbuffer0, fsbuffer1, fsbuffer2, fsbuffer3, fsbuffer4;
+    var fsbufferfs0, fsbufferfs1, fsbufferfs2, fsbufferfs3, fsbufferfs4;
+    var dtmp[OBJ_STREAM], dptr;
+    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
+    fsbuffer0 := t.fargetw(t.local(), @MinixFSBuffer0);
+    fsbuffer1 := t.fargetw(t.local(), @MinixFSBuffer1);
+    fsbuffer2 := t.fargetw(t.local(), @MinixFSBuffer2);
+    fsbuffer3 := t.fargetw(t.local(), @MinixFSBuffer3);
+    fsbuffer4 := t.fargetw(t.local(), @MinixFSBuffer4);
+    fsbufferfs0 := t.fargetw(t.local(), @MinixFSBufferFS0);
+    fsbufferfs1 := t.fargetw(t.local(), @MinixFSBufferFS1);
+    fsbufferfs2 := t.fargetw(t.local(), @MinixFSBufferFS2);
+    fsbufferfs3 := t.fargetw(t.local(), @MinixFSBufferFS3);
+    fsbufferfs4 := t.fargetw(t.local(), @MinixFSBufferFS4);
+    dptr := t.fargetw(t.local(), @DiskList);
+    t.farcopy(t.stack(), dtmp, t.local(), 
+        t.fargetw(t.local(), dptr + (disk << 1)), OBJ_STREAM<<1);
     ! Check buffer, if buffered, return copy
     ie
     (
         (position > 0) &
         (position < 8) & 
-        (MinixFSBuffer0 = position) &
-        (MinixFSBufferFS0 = disk)
+        (fsbuffer0 = position) &
+        (fsbufferfs0 = disk)
     ) do
-        t.farcopy(t.stack(), dest, t.local(), @MinixFSBuffer::0, 1024);
+        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::0, 1024);
         return TRUE;
     end
     else ie
     (
         (position >= 8) & 
         (position < 16) & 
-        (MinixFSBuffer1 = position) &
-        (MinixFSBufferFS1 = disk)
+        (fsbuffer1 = position) &
+        (fsbufferfs1 = disk)
     ) do
-        t.farcopy(t.stack(), dest, t.local(), @MinixFSBuffer::1024, 1024);
+        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::1024, 1024);
         return TRUE;
     end
     else ie
     (
         (position >= 16) & 
         (position < 64) & 
-        (MinixFSBuffer2 = position) &
-        (MinixFSBufferFS2 = disk)
+        (fsbuffer2 = position) &
+        (fsbufferfs2 = disk)
     ) do
-        t.farcopy(t.stack(), dest, t.local(), @MinixFSBuffer::2048, 1024);
+        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::2048, 1024);
         return TRUE;
     end
     else ie
     (
         (position >= 64) & 
         (position < 1024) & 
-        (MinixFSBuffer3 = position) &
-        (MinixFSBufferFS3 = disk)
+        (fsbuffer3 = position) &
+        (fsbufferfs3 = disk)
     ) do
-        t.farcopy(t.stack(), dest, t.local(), @MinixFSBuffer::3072, 1024);
+        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::3072, 1024);
         return TRUE;
     end
     else if
     (
         (position >= 1024) &
-        (MinixFSBuffer4 = position) &
-        (MinixFSBufferFS4 = disk)
+        (fsbuffer4 = position) &
+        (fsbufferfs4 = disk)
     ) do
-        t.farcopy(t.stack(), dest, t.local(), @MinixFSBuffer::4096, 1024);
+        t.farcopy(t.stack(), dest, t.local(), fsbuffer::4096, 1024);
         return TRUE;
     end
-    !t.writes(T3X.SYSERR, "[READ ");
-    !t.writenum(T3X.SYSERR, position);
-    !t.writes(T3X.SYSERR, "]");
+!t.rwrites(T3X.SYSERR, t.local(), "[READ ");
+!t.writenum(T3X.SYSERR, position);
+!t.rwrites(T3X.SYSERR, t.local(), "]");
     ! Read from disk
-    if(\stream_seek(DiskList[disk], position << 1, 0)) return FALSE;
-    if(stream_read(DiskList[disk], dest, 512) = 0) return FALSE;
-    if(\stream_seek(DiskList[disk], (position << 1) + 1, 0)) return FALSE;
-    if(stream_read(DiskList[disk], @dest::512, 512) = 0) return FALSE;
+    if(\stream_seek(dtmp, position << 1, 0)) return FALSE;
+    if(stream_read(dtmp, dest, 512) = 0) return FALSE;
+    if(\stream_seek(dtmp, (position << 1) + 1, 0)) return FALSE;
+    if(stream_read(dtmp, @dest::512, 512) = 0) return FALSE;
     ! Store on buffer
     ie
     (
         (position > 0) &
         (position < 8)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::0, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer0, position);
-        t.farsetw(t.local(), @MinixFSBufferFS0, disk);
+        t.farcopy(t.local(), @fsbuffer::0, t.stack(), dest, 1024);
+        t.farsetw(t.local(),   @fsbuffer0, position);
+        t.farsetw(t.local(), @fsbufferfs0, disk);
     end
     else ie
     (
         (position >= 8) & 
         (position < 16)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::1024, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer1, position);
-        t.farsetw(t.local(), @MinixFSBufferFS1, disk);
+        t.farcopy(t.local(), @fsbuffer::1024, t.stack(), dest, 1024);
+        t.farsetw(t.local(),   @fsbuffer1, position);
+        t.farsetw(t.local(), @fsbufferfs1, disk);
     end
     else ie
     (
         (position >= 16) & 
         (position < 64)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::2048, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer2, position);
-        t.farsetw(t.local(), @MinixFSBufferFS2, disk);
+        t.farcopy(t.local(), @fsbuffer::2048, t.stack(), dest, 1024);
+        t.farsetw(t.local(),   @fsbuffer2, position);
+        t.farsetw(t.local(), @fsbufferfs2, disk);
     end
     else ie
     (
         (position >= 64) & 
         (position < 1024)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::3072, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer3, position);
-        t.farsetw(t.local(), @MinixFSBufferFS3, disk);
+        t.farcopy(t.local(), @fsbuffer::3072, t.stack(), dest, 1024);
+        t.farsetw(t.local(),   @fsbuffer3, position);
+        t.farsetw(t.local(), @fsbufferfs3, disk);
     end
     else if
     (
         (position >= 1024)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::4096, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer4, position);
-        t.farsetw(t.local(), @MinixFSBufferFS4, disk);
+        t.farcopy(t.local(), @fsbuffer::4096, t.stack(), dest, 1024);
+        t.farsetw(t.local(),   @fsbuffer4, position);
+        t.farsetw(t.local(), @fsbufferfs4, disk);
     end
     return TRUE;
 end
 
 minixfs_write_zone(disk, position, orig) do
 ! Write zones (1024 bytes disk block) using 512 bytes physical blocks
+    var fsbuffer, fsbuffer0, fsbuffer1, fsbuffer2, fsbuffer3, fsbuffer4;
+    var fsbufferfs0, fsbufferfs1, fsbufferfs2, fsbufferfs3, fsbufferfs4;
+    var dtmp[OBJ_STREAM], dptr;
+    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
+    fsbuffer0 := t.fargetw(t.local(), @MinixFSBuffer0);
+    fsbuffer1 := t.fargetw(t.local(), @MinixFSBuffer1);
+    fsbuffer2 := t.fargetw(t.local(), @MinixFSBuffer2);
+    fsbuffer3 := t.fargetw(t.local(), @MinixFSBuffer3);
+    fsbuffer4 := t.fargetw(t.local(), @MinixFSBuffer4);
+    fsbufferfs0 := t.fargetw(t.local(), @MinixFSBufferFS0);
+    fsbufferfs1 := t.fargetw(t.local(), @MinixFSBufferFS1);
+    fsbufferfs2 := t.fargetw(t.local(), @MinixFSBufferFS2);
+    fsbufferfs3 := t.fargetw(t.local(), @MinixFSBufferFS3);
+    fsbufferfs4 := t.fargetw(t.local(), @MinixFSBufferFS4);
+    dptr := t.fargetw(t.local(), @DiskList);
+    t.farcopy(t.stack(), dtmp, t.local(), 
+        t.fargetw(t.local(), dptr + (disk << 1)), OBJ_STREAM<<1);
     !t.writes(T3X.SYSERR, "[WRITE ");
     !t.writenum(T3X.SYSERR, position);
     !t.writes(T3X.SYSERR, "]");
     ! Write to disk
-    if(\stream_seek(DiskList[disk], position << 1, 0)) return FALSE;
-    if(stream_write(DiskList[disk], orig, 512) = 0) return FALSE;
-    if(\stream_seek(DiskList[disk], (position << 1) + 1, 0)) return FALSE;
-    if(stream_write(DiskList[disk], @orig::512, 512) = 0) return FALSE;
+    if(\stream_seek(dtmp, position << 1, 0)) return FALSE;
+    if(stream_write(dtmp, orig, 512) = 0) return FALSE;
+    if(\stream_seek(dtmp, (position << 1) + 1, 0)) return FALSE;
+    if(stream_write(dtmp, @orig::512, 512) = 0) return FALSE;
     ! Store on buffer
     ie
     (
         (position > 0) &
         (position < 8)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::0, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer0, position);
-        t.farsetw(t.local(), @MinixFSBufferFS0, disk);
+        t.farcopy(t.local(), @fsbuffer::0, t.stack(), orig, 1024);
+        t.farsetw(t.local(),   @fsbuffer0, position);
+        t.farsetw(t.local(), @fsbufferfs0, disk);
     end
     else ie
     (
         (position >= 8) & 
         (position < 16)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::1024, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer1, position);
-        t.farsetw(t.local(), @MinixFSBufferFS1, disk);
+        t.farcopy(t.local(), @fsbuffer::1024, t.stack(), orig, 1024);
+        t.farsetw(t.local(),   @fsbuffer1, position);
+        t.farsetw(t.local(), @fsbufferfs1, disk);
     end
     else ie
     (
         (position >= 16) & 
         (position < 64)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::2048, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer2, position);
-        t.farsetw(t.local(), @MinixFSBufferFS2, disk);
+        t.farcopy(t.local(), @fsbuffer::2048, t.stack(), orig, 1024);
+        t.farsetw(t.local(),   @fsbuffer2, position);
+        t.farsetw(t.local(), @fsbufferfs2, disk);
     end
     else ie
     (
         (position >= 64) & 
         (position < 1024)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::3072, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer3, position);
-        t.farsetw(t.local(), @MinixFSBufferFS3, disk);
+        t.farcopy(t.local(), @fsbuffer::3072, t.stack(), orig, 1024);
+        t.farsetw(t.local(),   @fsbuffer3, position);
+        t.farsetw(t.local(), @fsbufferfs3, disk);
     end
     else if
     (
         (position >= 1024)
     ) do
-        t.farcopy(t.local(), @MinixFSBuffer::4096, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @MinixFSBuffer4, position);
-        t.farsetw(t.local(), @MinixFSBufferFS4, disk);
+        t.farcopy(t.local(), @fsbuffer::4096, t.stack(), orig, 1024);
+        t.farsetw(t.local(),   @fsbuffer4, position);
+        t.farsetw(t.local(), @fsbufferfs4, disk);
     end
     return TRUE;
 end
@@ -1396,13 +1458,13 @@ minixfs_load_zone(fs, id, pos, dest) do
     ie(id = 0) id := 1; else id := id - 1;
     if(fs[FS_STATUS] \= STATUS_FS_MOUNTED) return FALSE;
     if(fs[MINIXFS_TOTAL_ITENS] < id) return FALSE;
-    !t.writes(T3X.SYSERR, "[LOAD ID ");
-    !t.writenum(T3X.SYSERR, id);
-    !t.writes(T3X.SYSERR, " POS ");
-    !t.writenum(T3X.SYSERR, pos);
-    !t.writes(T3X.SYSERR, " ZONE ");
-    !t.writenum(T3X.SYSERR, fs[MINIXFS_LIST_ITENS]);
-    !t.writes(T3X.SYSERR, "]");
+!t.rwrites(T3X.SYSERR, t.local(), "[LOAD ID ");
+!t.writenum(T3X.SYSERR, id);
+!t.rwrites(T3X.SYSERR, t.local(), " POS ");
+!t.writenum(T3X.SYSERR, pos);
+!t.rwrites(T3X.SYSERR, t.local(), " ZONE ");
+!t.writenum(T3X.SYSERR, fs[MINIXFS_LIST_ITENS]);
+!t.rwrites(T3X.SYSERR, t.local(), "]");
     if
     (
         minixfs_read_zone
@@ -1545,7 +1607,8 @@ _minixfs_read(stream, seg, dest, len, ret) far do
         t.stack(), 
         fs, 
         t.local(), 
-        t.fargetw(t.local(),FSList) + (stream[STREAM_MINIXFS_FS] << 1), 
+        t.fargetw(t.local(),
+            t.fargetw(t.local(), @FSList)) + (stream[STREAM_MINIXFS_FS] << 1), 
         OBJ_FS << 1
     );
     last_zone := minixfs_last_zone_pos(fs, stream[STREAM_MINIXFS_ID]);
@@ -1778,6 +1841,151 @@ minixfs_init() do
     MinixFSBuffer3 := 0;
 end
 
+! ==========================================================================
+! Process Management
+! ==========================================================================
+
+const TOTAL_PROCESS = 32;
+
+const STATUS_PROCESS_EMPTY = 0;
+const STATUS_PROCESS_RUNING = 1;
+const STATUS_PROCESS_WAINTING = 2;
+
+struct OBJ_PROCESS =
+! Process
+    PROCESS_ID,
+    PROCESS_PARENT_ID,
+    PROCESS_SEG,
+    PROCESS_SP,
+    PROCESS_BP,
+    PROCESS_CS,
+    PROCESS_IP,
+    PROCESS_STATUS,
+    PROCESS_WAITING_ID,
+    PROCESS_RET;
+
+var ProcessList[TOTAL_PROCESS], ProcessData[TOTAL_PROCESS * OBJ_PROCESS];
+var ProcessCurrent, ProcessKernel;
+
+new_process() do
+    var i, ptr;
+    for(i=1,TOTAL_PROCESS) do
+        ptr :=t.fargetw(t.local(),t.fargetw(t.local(),@ProcessList)+(i << 1));
+        if
+        (
+            t.fargetw(t.local(), ptr + (PROCESS_STATUS<<1)) = 
+            STATUS_PROCESS_EMPTY
+        ) 
+        do
+            t.farsetw(t.local(), ptr + (PROCESS_SEG<<1), 0);
+            t.farsetw(t.local(), ptr + (PROCESS_IP<<1), 0);
+            t.farsetw(t.local(), ptr + (PROCESS_SP<<1), 0);
+            t.farsetw(t.local(), ptr + (PROCESS_BP<<1), 0);
+            t.farsetw(t.local(), ptr + (PROCESS_STATUS<<1), 
+                STATUS_PROCESS_RUNING);
+            return i;
+        end
+    end
+    return 0;
+end
+
+process_set_segs(id, seg, sp, bp, cs, ip)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    t.farsetw(t.local(), ptr + (PROCESS_SEG<<1), seg);
+    t.farsetw(t.local(), ptr + (PROCESS_CS<<1), cs);
+    t.farsetw(t.local(), ptr + (PROCESS_IP<<1), ip);
+    t.farsetw(t.local(), ptr + (PROCESS_SP<<1), sp);
+    t.farsetw(t.local(), ptr + (PROCESS_BP<<1), bp);
+end
+
+process_get_seg(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_SEG<<1));
+end
+
+process_get_cs(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_CS<<1));
+end
+
+process_get_sp(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_SP<<1));
+end
+
+process_get_bp(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_BP<<1));
+end
+
+process_get_ip(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_IP<<1));
+end
+
+process_get_status(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_STATUS<<1));
+end
+
+process_set_status(id, status)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    t.farsetw(t.local(), ptr + (PROCESS_STATUS<<1), status);
+end
+
+process_get_ret(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_RET<<1));
+end
+
+process_set_ret(id, ret)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    t.farsetw(t.local(), ptr + (PROCESS_RET<<1), ret);
+end
+
+process_get_parent(id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    return t.fargetw(t.local(), ptr + (PROCESS_PARENT_ID<<1));
+end
+
+process_set_parent(id, parent_id)do
+    var ptr;
+    ptr := t.fargetw(t.local(),t.fargetw(t.local(), @ProcessList)+(id << 1));
+    t.farsetw(t.local(), ptr + (PROCESS_PARENT_ID<<1), parent_id);
+end
+
+process_get_current()do
+    return t.fargetw(t.local(), @ProcessCurrent);
+end
+
+process_set_current(id)do
+    t.farsetw(t.local(), @ProcessCurrent, id);
+end
+
+process_init() do
+    var i;
+    for(i=0,TOTAL_PROCESS) do
+        ProcessList[i] := @ProcessData[OBJ_PROCESS * i];
+        ProcessList[i][PROCESS_ID] := i;
+        ProcessList[i][PROCESS_STATUS] := STATUS_PROCESS_EMPTY;
+    end
+    ProcessKernel := new_process();
+    process_set_segs(ProcessKernel, t.local(), 0xff00, 0xff00, 
+        t.local(), 256);
+    ProcessCurrent := ProcessKernel;
+end
+
 
 ! ==========================================================================
 ! Interrupt Handlers
@@ -1798,39 +2006,101 @@ end
 
 int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
 ! Show calling args on screen
-    stream_writes(StreamErr, "[INT 0x");
-    stream_write_hex(StreamErr, int);
-    stream_writes(StreamErr, " AX ");
-    stream_write_num(StreamErr, ax);
-    stream_writes(StreamErr, " AH 0x");
-    stream_write_hex(StreamErr, ax >> 8);
-    stream_writes(StreamErr, " BX ");
-    stream_write_num(StreamErr, bx);
-    stream_writes(StreamErr, " CX ");
-    stream_write_num(StreamErr, cx);
-    stream_writes(StreamErr, " DX ");
-    stream_write_num(StreamErr, dx);
-    stream_writes(StreamErr, " DS ");
-    stream_write_num(StreamErr, es);
-    stream_writes(StreamErr, " SI ");
-    stream_write_num(StreamErr, si);
-    stream_writes(StreamErr, " ES ");
-    stream_write_num(StreamErr, es);
-    stream_writes(StreamErr, " DI ");
-    stream_write_num(StreamErr, di);
-    stream_writes(StreamErr, "]\r\n");
+    var stream[OBJ_STREAM], seg;
+    seg := t.local();
+    t.farcopy(t.stack(), stream, t.local(), t.fargetw(t.local(), @StreamErr), 
+        OBJ_STREAM <<1);
+    stream_rwrites(stream, seg, "[INT 0x");
+    stream_write_hex(stream, int);
+    stream_rwrites(stream, seg, " AX ");
+    stream_write_num(stream, ax);
+    stream_rwrites(stream, seg, " AH 0x");
+    stream_write_hex(stream, ax >> 8);
+    stream_rwrites(stream, seg, " BX ");
+    stream_write_num(stream, bx);
+    stream_rwrites(stream, seg, " CX ");
+    stream_write_num(stream, cx);
+    stream_rwrites(stream, seg, " DX ");
+    stream_write_num(stream, dx);
+    stream_rwrites(stream, seg, " DS ");
+    stream_write_num(stream, es);
+    stream_rwrites(stream, seg, " SI ");
+    stream_write_num(stream, si);
+    stream_rwrites(stream, seg, " ES ");
+    stream_write_num(stream, es);
+    stream_rwrites(stream, seg, " DI ");
+    stream_write_num(stream, di);
+    stream_rwrites(stream, seg, "]\r\n");
+    t.farcopy(t.local(), t.fargetw(t.local(), @StreamErr), t.stack(), stream,  
+        OBJ_STREAM <<1);
 end
 
 decl banner(1);
 decl shutdown(0);
+decl com_exec(2);
+
+int79exec(address, args)do
+    var stream[OBJ_STREAM];
+    if(\fs_open_file(address, stream)) return %1;
+    return com_exec(stream, args);
+end
 
 int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! HUSIS API (DS,ES,SS,SP from Application)
-    ie(ax = 1) ! Clear and print banner
+    ie(ax = 0) ! Exit
+        t.int86ax(0x21, 0x4c00 | (bx & 0xff), bx, cx, dx, si, di);
+    else ie(ax = 1) ! Clear and print banner
         banner(bx);
-    else ie(ax = 2) do
+    else ie(ax = 2) do ! Shutdown
         t.setsegs(t.local(), 0xff00, 0xff00);
         shutdown();
+    end
+    else ie(ax = 3) do ! Execute file
+        ax := int79exec(bx, cx);
+    end
+    else ie(ax = 4) do ! Get process id
+        ax := process_get_current();
+    end
+    else ie(ax = 5) do ! Get parent id
+        ax := process_get_parent(process_get_current());
+    end
+    else ie(ax = 6) do ! Get process info
+        ie(cx > TOTAL_PROCESS) 
+            ax := %2;
+        else ie(bx = 0)
+            ax := process_get_parent(cx);
+        else ie(bx = 1)
+            ax := process_get_seg(cx);
+        else ie(bx = 2)
+            ax := process_get_ip(cx);
+        else ie(bx = 3)
+            ax := process_get_sp(cx);
+        else ie(bx = 4)
+            ax := process_get_bp(cx);
+        else ie(bx = 5)
+            ax := process_get_status(cx);
+        else ax := %1;
+    end
+    else ie(ax = 10) do ! Write text on SYSOUT
+        t.writes(T3X.SYSOUT, bx);
+    end
+    else ie(ax = 11) do ! Write text on SYSERR
+        t.writes(T3X.SYSERR, bx);
+    end
+    else ie(ax = 12) do ! Write number on SYSOUT
+        t.writenum(T3X.SYSOUT, bx);
+    end
+    else ie(ax = 13) do ! Write number on SYSERR
+        t.writenum(T3X.SYSOUT, bx);
+    end
+    else ie(ax = 14) do ! Write line text on SYSOUT
+        t.writeln(T3X.SYSOUT, bx);
+    end
+    else ie(ax = 15) do ! Write line text on SYSERR
+        t.writeln(T3X.SYSERR, bx);
+    end
+    else ie(ax = 20) do ! Read line from SYSIN
+        t.read(T3X.SYSIN, bx, cx);
     end
     else
         int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
@@ -1845,6 +2115,7 @@ end
 int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! DOS API (DS,ES,SS,SP from Application)
     var func, al, preserve, tmp[OBJ_STREAM], tmp_ptr;
+    var proc_ip, proc_seg, proc_sp, proc_bp, proc_cs;
     func := ax >> 8;
     al := ax & 0xff;
     ie(func = 0x40) do ! DOS WRITE
@@ -1877,61 +2148,20 @@ int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         end
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
+    else ie(func = 0x4c) do ! EXIT
+        process_set_status(process_get_current(), STATUS_PROCESS_EMPTY);
+        mem_free_process(process_get_current());
+        process_set_current(process_get_parent(process_get_current()));
+        proc_bp := process_get_bp(process_get_current());
+        proc_cs := process_get_cs(process_get_current());
+        proc_ip := process_get_ip(process_get_current());
+        proc_sp := process_get_sp(process_get_current());
+        proc_seg := process_get_seg(process_get_current());
+        process_set_ret(process_get_current(), ax & 0xff);
+        t.bochsbrk();
+        t.jmpstack(proc_seg, proc_sp, proc_bp, proc_cs, proc_ip);
+    end
     else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-end
-
-! ==========================================================================
-! Process Management
-! ==========================================================================
-
-const TOTAL_PROCESS = 32;
-
-const STATUS_PROCESS_EMPTY = 0;
-const STATUS_PROCESS_RUNING = 1;
-const STATUS_PROCESS_WAINTING = 2;
-
-struct OBJ_PROCESS =
-! Process
-    PROCESS_ID,
-    PROCESS_PARENT_ID,
-    PROCESS_SEG,
-    PROCESS_SP,
-    PROCESS_IP,
-    PROCESS_STATUS,
-    PROCESS_WAITING_ID;
-
-var ProcessList[TOTAL_PROCESS], ProcessData[TOTAL_PROCESS * OBJ_PROCESS];
-var ProcessCurrent, ProcessKernel;
-
-new_process(seg, sp, ip) do
-    var i, ptr;
-    for(i=1,TOTAL_PROCESS) do
-        ptr := t.fargetw(t.local(), ProcessList) + (i * (OBJ_PROCESS<<1));
-        if
-        (
-            t.fargetw(t.local(), ptr + (PROCESS_STATUS<1)) = 
-            STATUS_PROCESS_EMPTY
-        ) 
-        do
-            t.farsetw(t.local(), ptr + (PROCESS_SEG<1), seg);
-            t.farsetw(t.local(), ptr + (PROCESS_IP<1), ip);
-            t.farsetw(t.local(), ptr + (PROCESS_SP<1), sp);
-            t.farsetw(t.local(), ptr + (PROCESS_STATUS<1), STATUS_PROCESS_RUNING);
-            return i;
-        end
-    end
-    return 0;
-end
-
-process_init() do
-    var i;
-    for(i=0,TOTAL_PROCESS) do
-        ProcessList[i] := @ProcessData[OBJ_PROCESS * i];
-        ProcessList[i][PROCESS_ID] := i;
-        ProcessList[i][PROCESS_STATUS] := STATUS_PROCESS_EMPTY;
-    end
-    ProcessKernel := new_process(t.local(), 0xfffe, 0);
-    ProcessCurrent := ProcessKernel;
 end
 
 ! ==========================================================================
@@ -1940,10 +2170,11 @@ end
 
 com_exec(stream, args) do
 ! Load COM file to RAM and Execute
-    var temp::128, seg, i, pos, block, process, args_size, exec, sp, ip;
+    var temp::128, seg, i, pos, block, process, args_size, exec, sp, bp, ip;
 ! TODO: Implement multiple process
-    seg := mem_alloc_seg(1);
-    if(seg = 0) return %1;
+    process := new_process();
+    seg := mem_alloc_seg(process);
+    if(seg = 0) return %2;
     ! Load COM file
     pos := 256;
     block := 0;
@@ -1962,13 +2193,21 @@ com_exec(stream, args) do
     t.farsetb(seg, 0x81 + args_size, 0xd);
     exec := FALSE;
     sp := t.stackptr();
+    bp := t.baseptr();
     ip := t.instrptr();
     ie(exec)do
         ! Exit of COM Program
+        return process_get_ret(process_get_current());
     end
     else do
         ! Call COM Program
-        t.jmpstack(seg, 0xfffe, 256);
+        process_set_segs(process_get_current(), t.stack(), sp, bp, 
+            t.local(), ip);
+        process_set_segs(process, seg, 0xfffe, 0xfffe, seg, 256);
+        process_set_parent(process, process_get_current());
+        process_set_current(process);
+        exec := TRUE;
+        t.jmpstack(seg, 0xfffe, 0xfffe, seg, 256);
     end
 
 end
@@ -2020,9 +2259,9 @@ end
 fatal_error(msg) do
 ! Display fatal error and shutdown (My own 'blue screen of death' =) )
     var tmp::1;
-    t.writes(T3X.SYSERR, "\ex00\ey24FATAL ERROR: ");
-    t.writeln(T3X.SYSERR, msg);
-    t.writes(T3X.SYSERR, "\r\nPress ENTER to shutdown.\r\n");
+    t.rwrites(T3X.SYSERR, t.local(), "\ex00\ey24FATAL ERROR: ");
+    t.rwriteln(T3X.SYSERR, t.local(), msg);
+    t.rwrites(T3X.SYSERR, t.local(), "\r\nPress ENTER to shutdown.\r\n");
     t.read(T3X.SYSIN, tmp, 0);
     shutdown();
 end
@@ -2086,6 +2325,8 @@ do
         if(t.getarg(5, arg, 64) = 0) 
             fatal_error(
             "Shell missing. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH");
+        !if(\fs_open_file("/Programs/Hello2.com", stream)) fatal_error("Hello2 file not found.");
+        !com_exec(stream, "");
         t.writes(T3X.SYSOUT, "Loading ");
         t.writeln(T3X.SYSOUT, arg);
         if(\fs_open_file(arg, stream)) fatal_error("Shell file not found.");
@@ -2096,10 +2337,6 @@ do
 "Disk parameters incomplete. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH"
         );
     end
-
-
-    t.writes(T3X.SYSERR, "\ex00\ey24System Halted. Press ENTER to shutdown.");
-    t.read(T3X.SYSIN, arg, 0);
 
     ! Shutdown system
     shutdown();

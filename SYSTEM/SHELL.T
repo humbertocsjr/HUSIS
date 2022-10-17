@@ -20,16 +20,22 @@ char_is_upper(c) return (c >= 'A') & (c <= 'Z');
 char_is_lower(c) return (c >= 'a') & (c <= 'z');
 char_is_alpha(c) return char_is_lower(c) | char_is_upper(c);
 char_is_alphanum(c) return char_is_alpha(c) | char_is_num(c);
+char_from_hex(c) do
+    ie(char_is_lower(c)) return c - 'a' + 10;
+    else ie(char_is_upper(c)) return c - 'A' + 10;
+    else if(char_is_num(c)) return c - '0';
+    return 0;
+end
 
 str_len(txt) 
 ! Get ASCIZ string length
     return t.memscan(txt, 0, 2048);
 
-str_copy(orig, dest) 
+str_copy(dest, orig) 
 ! Copy string contents to another
     t.memcopy(dest, orig, str_len(orig)+1);
 
-str_concat(orig, dest)
+str_concat(dest, orig)
 ! Concat string
     t.memcopy(@dest::str_len(dest), orig, str_len(orig)+1);
 
@@ -56,11 +62,11 @@ rstr_len(seg, txt)
 ! Get ASCIZ string length from remote string
     return t.farscan(seg, txt, 0, 2048);
 
-rstr_copy(sego, orig, segd, dest) 
+rstr_copy(segd, dest, sego, orig) 
 ! Copy retmote string contents to another remote string 
     t.farcopy(segd, dest, sego, orig, rstr_len(sego, orig)+1);
 
-rstr_concat(sego, orig, segd, dest)
+rstr_concat(segd, dest, sego, orig)
 ! Concat remote strings
     t.farcopy(
         segd, 
@@ -192,6 +198,7 @@ cmd_help(args)do
 end
 
 exec_cmd(cmd, args)do
+    var file::128, ret;
     if(str_len(cmd) > 0)do
         ie(str_equal(cmd, "cls")) do
             t.writeln(T3X.SYSOUT, "\ec");
@@ -205,9 +212,23 @@ exec_cmd(cmd, args)do
         else ie(str_equal(cmd, "shutdown")) cmd_shutdown(args);
         else ie(str_equal(cmd, "?")) cmd_help(args);
         else do 
-            t.writes(T3X.SYSERR, "Command \q");
-            t.writes(T3X.SYSERR, cmd);
-            t.writeln(T3X.SYSERR, "\q not found");
+            str_copy(file, "/Programs/");
+            str_concat(file, cmd);
+            str_concat(file, ".com");
+            ret := t.int86ax(0x79, 3,file,args,0, 0,0);
+            t.bochsbrk();
+            ie(ret = %1)do
+                t.writes(T3X.SYSERR, "Command \q");
+                t.writes(T3X.SYSERR, cmd);
+                t.writeln(T3X.SYSERR, "\q not found");
+            end
+            else ie(ret = %2)do
+                t.writes(T3X.SYSERR, "Out of memory");
+            end
+            else if(ret \= 0) do
+                t.writes(T3X.SYSOUT, "\r\nReturn.......: ");
+                t.writenum(T3X.SYSOUT, ret);
+            end
         end
     end
 end
