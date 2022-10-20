@@ -31,15 +31,10 @@ start:
     mov bx, @msg
     int $79
 
-    ; Read string using HUSIS
-    mov ax, 20
-    mov bx, @msg
-    mov cx, 12
-    int $79
-
     ; Exit using HUSIS
-    mov ax, 0
-    int $79
+    mov ax, $4C00
+    xchg bx,bx
+    int $21
     
 infinite:
     hlt

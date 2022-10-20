@@ -14,8 +14,8 @@ Old-School Assembler para BIOS v1.17 [PT-BR]
 -= Hello World S86 PRG =-
 -= Hello World S86 COM =-
 -= Hello World T3X COM =-
-Text = 4521, Data = 622, Symbols = 96, Nlist = 1022, Labels = 116
+Text = 5878, Data = 622, Symbols = 178, Nlist = 2063, Labels = 158
 -= Shell =-
-Text = 4939, Data = 622, Symbols = 85, Nlist = 834, Labels = 135
+Text = 8253, Data = 622, Symbols = 189, Nlist = 2165, Labels = 256
 -= HUSIS Kernel =-
-Text = 32031, Data = 7928, Symbols = 345, Nlist = 4302, Labels = 660
+Text = -31681, Data = 7928, Symbols = 346, Nlist = 4314, Labels = 711

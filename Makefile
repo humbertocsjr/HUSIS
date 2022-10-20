@@ -21,7 +21,7 @@ img_copy:
 	sudo mkdir TMP/Documents
 	sudo mkdir TMP/Library
 	sudo mkdir TMP/System
-	sudo cp AUTOEXEC TMP/System/autoexec
+	sudo cp AUTOEXEC.HSH TMP/System/Autoexec.hsh
 	sudo cp PROGS/HELLO1.PRG TMP/Programs/Hello1.prg
 	sudo cp PROGS/HELLO2.COM TMP/Programs/Hello2.com
 	sudo cp PROGS/HELLO3.COM TMP/Programs/Hello3.com

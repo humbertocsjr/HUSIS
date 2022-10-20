@@ -3,19 +3,159 @@
 ! License: 0BSD or Public Domain
 
 
+const TRUE = %1;
+const FALSE = 0;
+
 ! ==========================================================================
 ! Standard I/O
 ! ==========================================================================
 
-print(str) t.int86ax(0x79, 10,str,0,0, 0,0);
-error(str) t.int86ax(0x79, 11,str,0,0, 0,0);
-println(str) t.int86ax(0x79, 14,str,0,0, 0,0);
-errorln(str) t.int86ax(0x79, 15,str,0,0, 0,0);
-printenter() t.int86ax(0x79, 14,"",0,0, 0,0);
-errorenter() t.int86ax(0x79, 15,"",0,0, 0,0);
-printnum(str) t.int86ax(0x79, 12,str,0,0, 0,0);
-errornum(str) t.int86ax(0x79, 13,str,0,0, 0,0);
-readln(dest, len) return t.int86ax(0x79, 20,dest,len,0, 0,0);
+io_print(str) t.int86ax(0x79, 10,str,0,0, 0,0);
+io_error(str) t.int86ax(0x79, 11,str,0,0, 0,0);
+io_println(str) t.int86ax(0x79, 14,str,0,0, 0,0);
+io_errorln(str) t.int86ax(0x79, 15,str,0,0, 0,0);
+io_printenter() t.int86ax(0x79, 14,"",0,0, 0,0);
+io_errorenter() t.int86ax(0x79, 15,"",0,0, 0,0);
+io_printnum(str) t.int86ax(0x79, 12,str,0,0, 0,0);
+io_errornum(str) t.int86ax(0x79, 13,str,0,0, 0,0);
+io_printfixed(str, len) t.int86ax(0x79, 16,str,len,0, 0,0);
+io_errorfixed(str, len) t.int86ax(0x79, 17,str,len,0, 0,0);
+io_printchar(char) t.int86ax(0x79, 18,char,0,0, 0,0);
+io_errorchar(char) t.int86ax(0x79, 19,char,0,0, 0,0);
+io_readln(dest, len) return t.int86ax(0x79, 20,dest,len,0, 0,0);
+
+! ==========================================================================
+! File
+! ==========================================================================
+
+
+const STATUS_FS_AVAIL = 0;
+const STATUS_FS_MOUNTED = 1;
+
+
+struct OBJ_FS = 
+! File System Object
+    FS_STATUS,
+    FS_ID,
+    FS_DISK,
+    FS_SEG,
+    FS_PTR_FIRST_ITEM,
+    FS_PTR_NEXT_ITEM,
+    FS_PTR_UMOUNT,
+    FS_AUX1,
+    FS_AUX2,
+    FS_AUX3,
+    FS_AUX4,
+    FS_AUX5,
+    FS_AUX6,
+    FS_AUX7,
+    FS_AUX8,
+    FS_AUX9,
+    FS_AUX10;
+
+const TYPE_UNKNOWN = 0;
+const TYPE_FILE = 1;
+const TYPE_DIRECTORY = 2;
+
+struct OBJ_ITEM_HEADER =
+! File System Item Object
+    ITEM_TYPE,
+    ITEM_PARENT_ID,
+    ITEM_ID,
+    ITEM_POS_ON_PARENT,
+    ITEM_SEG_OPEN,
+    ITEM_PTR_OPEN,
+    ITEM_FS,
+    ITEM_NAME;
+
+open_file(address, stream) return t.int86ax(0x79, 44,address,stream,0, 0,0);
+open_dir(address, item) return t.int86ax(0x79, 40,address,item,0, 0,0);
+item_first(dir_item, item) return t.int86ax(0x79, 41,dir_item,item,0, 0,0);
+item_next(dir_item, item) return t.int86ax(0x79, 42,dir_item,item,0, 0,0);
+item_open(item, stream) return t.int86ax(0x79, 43,item,stream,0, 0,0);
+item_copy(item_dest, item_orig) return t.int86ax(0x79, 43,item_orig,item_dest,0, 0,0);
+
+! ==========================================================================
+! Stream I/O
+! ==========================================================================
+
+const STATUS_UNKNOWN = 0;
+const STATUS_OPEN = 1;
+const STATUS_CLOSE = 2;
+
+struct OBJ_RET =
+! Return Object
+    RET_OK,
+    RET_VALUE,
+    RET_AUX;
+
+struct OBJ_STREAM = 
+! String Object
+    STREAM_STATUS,
+    STREAM_SEG, 
+    STREAM_PTR_AVAIL,
+    STREAM_PTR_SEEK,
+    STREAM_PTR_CAN_READ, 
+    STREAM_PTR_READ, 
+    STREAM_PTR_CAN_WRITE,
+    STREAM_PTR_WRITE,
+    STREAM_PTR_CLOSE,
+    STREAM_SEG_BUFFER,
+    STREAM_SIZE_BUFFER,
+    STREAM_PTR_BUFFER,
+    STREAM_POS_BUFFER,
+    STREAM_POS,
+    STREAM_POS_HIGH,
+    STREAM_AUX1,
+    STREAM_AUX2,
+    STREAM_AUX3,
+    STREAM_AUX4,
+    STREAM_AUX5,
+    STREAM_AUX6,
+    STREAM_AUX7,
+    STREAM_AUX8,
+    STREAM_AUX9,
+    STREAM_AUX10;
+
+stream_readfixed(stream, dest, len) return t.int86ax(0x79, 50,stream,dest,len, 0,0);
+stream_writefixed(stream, orig, len) return t.int86ax(0x79, 51,stream,orig,len, 0,0);
+stream_close(stream) return t.int86ax(0x79, 52,stream,0,0, 0,0);
+stream_buffer_init(buffer, total_len) do
+    if(total_len < 10) return FALSE;
+    buffer[0] := total_len - 6;
+    buffer[1] := 0;
+    buffer[2] := 0;
+    return TRUE;
+end
+stream_readln(stream, buffer, dest, dest_len) do
+    var i, j, contents;
+    if(buffer[1] = 0) do
+        buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
+        if(buffer[1] = 0) return FALSE;
+        buffer[2] := 0;
+    end
+    dest::0 := 0;
+    contents := @buffer[3];
+    j := buffer[2];
+    for(i=0,dest_len) do
+        if(j = buffer[1]) do
+            buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
+            if(buffer[1] = 0) return i;
+            buffer[2] := 0;
+            j := 0;
+        end
+        if(contents::j = 0) leave;
+        if(contents::j = '\n') leave;
+        if(contents::j \= '\r') do
+            dest::i := contents::j;
+            i := i + 1;
+            dest::i := 0;
+        end
+        j := j + 1;
+        buffer[2] := j;
+    end
+    return i;
+end
 
 ! ==========================================================================
 ! Process info

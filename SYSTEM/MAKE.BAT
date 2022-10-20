@@ -1,2 +1,7 @@
 echo -= Shell =- >> ..\MAKE.LOG
+echo ! DONT EDIT THIS FILE > SHELL.T
+echo ! DONT EDIT THIS FILE >> SHELL.T
+echo ! DONT EDIT THIS FILE >> SHELL.T
+type ..\LIBHUSIS.T >> SHELL.T
+type SHELL\MAIN.T >> SHELL.T
 ..\bin\t SHELL >> ..\MAKE.LOG

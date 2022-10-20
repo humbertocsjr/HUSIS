@@ -1,15 +1,181 @@
-! Text Shell for HUSIS
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
-! 3-Clause BSD license
-! Text user interface for HUSIS
+! License: 0BSD or Public Domain
 
-
-const VERSION = 0;
-const SUB_VERSION = 1;
-const REVISION = 0;
 
 const TRUE = %1;
 const FALSE = 0;
+
+! ==========================================================================
+! Standard I/O
+! ==========================================================================
+
+io_print(str) t.int86ax(0x79, 10,str,0,0, 0,0);
+io_error(str) t.int86ax(0x79, 11,str,0,0, 0,0);
+io_println(str) t.int86ax(0x79, 14,str,0,0, 0,0);
+io_errorln(str) t.int86ax(0x79, 15,str,0,0, 0,0);
+io_printenter() t.int86ax(0x79, 14,"",0,0, 0,0);
+io_errorenter() t.int86ax(0x79, 15,"",0,0, 0,0);
+io_printnum(str) t.int86ax(0x79, 12,str,0,0, 0,0);
+io_errornum(str) t.int86ax(0x79, 13,str,0,0, 0,0);
+io_printfixed(str, len) t.int86ax(0x79, 16,str,len,0, 0,0);
+io_errorfixed(str, len) t.int86ax(0x79, 17,str,len,0, 0,0);
+io_printchar(char) t.int86ax(0x79, 18,char,0,0, 0,0);
+io_errorchar(char) t.int86ax(0x79, 19,char,0,0, 0,0);
+io_readln(dest, len) return t.int86ax(0x79, 20,dest,len,0, 0,0);
+
+! ==========================================================================
+! File
+! ==========================================================================
+
+
+const STATUS_FS_AVAIL = 0;
+const STATUS_FS_MOUNTED = 1;
+
+
+struct OBJ_FS = 
+! File System Object
+    FS_STATUS,
+    FS_ID,
+    FS_DISK,
+    FS_SEG,
+    FS_PTR_FIRST_ITEM,
+    FS_PTR_NEXT_ITEM,
+    FS_PTR_UMOUNT,
+    FS_AUX1,
+    FS_AUX2,
+    FS_AUX3,
+    FS_AUX4,
+    FS_AUX5,
+    FS_AUX6,
+    FS_AUX7,
+    FS_AUX8,
+    FS_AUX9,
+    FS_AUX10;
+
+const TYPE_UNKNOWN = 0;
+const TYPE_FILE = 1;
+const TYPE_DIRECTORY = 2;
+
+struct OBJ_ITEM_HEADER =
+! File System Item Object
+    ITEM_TYPE,
+    ITEM_PARENT_ID,
+    ITEM_ID,
+    ITEM_POS_ON_PARENT,
+    ITEM_SEG_OPEN,
+    ITEM_PTR_OPEN,
+    ITEM_FS,
+    ITEM_NAME;
+
+open_file(address, stream) return t.int86ax(0x79, 44,address,stream,0, 0,0);
+open_dir(address, item) return t.int86ax(0x79, 40,address,item,0, 0,0);
+item_first(dir_item, item) return t.int86ax(0x79, 41,dir_item,item,0, 0,0);
+item_next(dir_item, item) return t.int86ax(0x79, 42,dir_item,item,0, 0,0);
+item_open(item, stream) return t.int86ax(0x79, 43,item,stream,0, 0,0);
+item_copy(item_dest, item_orig) return t.int86ax(0x79, 43,item_orig,item_dest,0, 0,0);
+
+! ==========================================================================
+! Stream I/O
+! ==========================================================================
+
+const STATUS_UNKNOWN = 0;
+const STATUS_OPEN = 1;
+const STATUS_CLOSE = 2;
+
+struct OBJ_RET =
+! Return Object
+    RET_OK,
+    RET_VALUE,
+    RET_AUX;
+
+struct OBJ_STREAM = 
+! String Object
+    STREAM_STATUS,
+    STREAM_SEG, 
+    STREAM_PTR_AVAIL,
+    STREAM_PTR_SEEK,
+    STREAM_PTR_CAN_READ, 
+    STREAM_PTR_READ, 
+    STREAM_PTR_CAN_WRITE,
+    STREAM_PTR_WRITE,
+    STREAM_PTR_CLOSE,
+    STREAM_SEG_BUFFER,
+    STREAM_SIZE_BUFFER,
+    STREAM_PTR_BUFFER,
+    STREAM_POS_BUFFER,
+    STREAM_POS,
+    STREAM_POS_HIGH,
+    STREAM_AUX1,
+    STREAM_AUX2,
+    STREAM_AUX3,
+    STREAM_AUX4,
+    STREAM_AUX5,
+    STREAM_AUX6,
+    STREAM_AUX7,
+    STREAM_AUX8,
+    STREAM_AUX9,
+    STREAM_AUX10;
+
+stream_readfixed(stream, dest, len) return t.int86ax(0x79, 50,stream,dest,len, 0,0);
+stream_writefixed(stream, orig, len) return t.int86ax(0x79, 51,stream,orig,len, 0,0);
+stream_close(stream) return t.int86ax(0x79, 52,stream,0,0, 0,0);
+stream_buffer_init(buffer, total_len) do
+    if(total_len < 10) return FALSE;
+    buffer[0] := total_len - 6;
+    buffer[1] := 0;
+    buffer[2] := 0;
+    return TRUE;
+end
+stream_readln(stream, buffer, dest, dest_len) do
+    var i, j, contents;
+    if(buffer[1] = 0) do
+        buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
+        if(buffer[1] = 0) return FALSE;
+        buffer[2] := 0;
+    end
+    dest::0 := 0;
+    contents := @buffer[3];
+    j := buffer[2];
+    for(i=0,dest_len) do
+        if(j = buffer[1]) do
+            buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
+            if(buffer[1] = 0) return i;
+            buffer[2] := 0;
+            j := 0;
+        end
+        if(contents::j = 0) leave;
+        if(contents::j = '\n') leave;
+        if(contents::j \= '\r') do
+            dest::i := contents::j;
+            i := i + 1;
+            dest::i := 0;
+        end
+        j := j + 1;
+        buffer[2] := j;
+    end
+    return i;
+end
+
+! ==========================================================================
+! Process info
+! ==========================================================================
+
+husis_process_id() return t.int86ax(0x79, 4,0,0,0, 0,0);
+husis_parent_id() return t.int86ax(0x79, 5,0,0,0, 0,0);
+husis_other_parent_id(id) return t.int86ax(0x79, 6,0,0,0, 0,0);
+husis_other_seg(id) return t.int86ax(0x79, 6,1,id,0, 0,0);
+husis_other_ip(id) return t.int86ax(0x79, 6,2,id,0, 0,0);
+husis_other_sp(id) return t.int86ax(0x79, 6,3,id,0, 0,0);
+husis_other_bp(id) return t.int86ax(0x79, 6,4,id,0, 0,0);
+husis_other_status(id) return t.int86ax(0x79, 6,5,0,0, 0,0);
+husis_exit(status) return t.int86ax(0x79, 0,status,0,0, 0,0);
+husis_shutdown() return t.int86ax(0x79, 2,0,0,0, 0,0);
+husis_banner(clear_screen) return t.int86ax(0x79, 1,clear_screen,0,0, 0,0);
+husis_exec(file_name, args) return t.int86ax(0x79, 3,file_name,args,0, 0,0);
 
 ! ==========================================================================
 ! String/Character
@@ -58,6 +224,30 @@ end
 str_to_num(str) return str_to_num2(str, 0);
 ! Convert string to number
 
+str_to_upper(str) do
+! Convert to upper case
+    var i;
+    i := 0;
+    while(str::i \= 0) do
+        if(char_is_lower(str::i)) do
+            str::i := str::i - 'a' + 'A';
+        end
+        i := i + 1;
+    end
+end
+
+str_to_lower(str) do
+! Convert to upper case
+    var i;
+    i := 0;
+    while(str::i \= 0) do
+        if(char_is_upper(str::i)) do
+            str::i := str::i - 'A' + 'a';
+        end
+        i := i + 1;
+    end
+end
+
 rstr_len(seg, txt) 
 ! Get ASCIZ string length from remote string
     return t.farscan(seg, txt, 0, 2048);
@@ -101,10 +291,23 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 t.writes(file, str) t.write(file, str, str_len(str));
 ! Write string to file
 
+t.rwrites(file, seg, str) do
+! Write string to file
+    var tmp::128;
+    t.farcopy(t.stack(), tmp, seg, str, 128);
+    t.write(file, tmp, str_len(tmp));
+end
+
 t.writeln(file, str) do
 ! Write line string to file
     t.write(file, str, str_len(str));
-    t.write(file, "\r\n", 2);
+    t.rwrites(file, t.local(), "\r\n");
+end
+
+t.rwriteln(file, seg, str) do
+! Write line string to file
+    t.rwrites(file, seg, str);
+    t.rwrites(file, t.local(), "\r\n");
 end
 
 t.writec(file, c) do
@@ -126,11 +329,16 @@ t.writenum(file, value) do
     tmp2 := value / 10;
     if (tmp2 > 0) t.writenum(file, tmp2);
     t.writec(file, tmp + '0'); 
-end
+end! Text Shell for HUSIS
+! Humberto Costa dos Santos Junior, 2022
+! 3-Clause BSD license
+! Text user interface for HUSIS
 
-print(str) t.writes(T3X.SYSOUT, str);
-println(str) t.writeln(T3X.SYSOUT, str);
-printnum(value) t.writenum(T3X.SYSOUT, value);
+
+const VERSION = 0;
+const SUB_VERSION = 1;
+const REVISION = 0;
+
 
 ! ==========================================================================
 ! Main
@@ -171,15 +379,39 @@ end
 
 cmd_ver(args)do
     banner(TRUE);
-    print("\ef03HUSIS Shell\ef04 v");
-    printnum(VERSION);
-    print(".");
-    printnum(SUB_VERSION);
-    print(" R");
-    printnum(REVISION);
-    println("\ef07");
-    println("Copyright (c) 2022, Humberto Costa dos Santos Junior");
-    println("License: 3-Clause BSD");
+    io_print("\ef03HUSIS Shell\ef04 v");
+    io_printnum(VERSION);
+    io_print(".");
+    io_printnum(SUB_VERSION);
+    io_print(" R");
+    io_printnum(REVISION);
+    io_println("\ef07");
+    io_println("Copyright (c) 2022, Humberto Costa dos Santos Junior");
+    io_println("License: 3-Clause BSD");
+end
+
+cmd_mem(args)do
+    banner(TRUE);
+    io_print("Avail. memory: ");
+    io_printnum(t.int86ax(0x79, 30,0,0,0, 0,0));
+    io_print("KiB");
+end
+
+cmd_type(args)do
+    var stream[OBJ_STREAM], buffer::512, tmp::128, i;
+    ie(open_file(args, stream)) do
+        stream_buffer_init(buffer, 512);
+        i := 1;
+        while(i \= FALSE)do
+            i := stream_readln(stream, buffer, tmp, 128);
+            io_printfixed(tmp, i);
+            io_printenter();
+        end
+        stream_close(stream);
+    end
+    else do
+        io_errorln("File not found");
+    end
 end
 
 cmd_shutdown(args)do
@@ -188,17 +420,20 @@ end
 
 cmd_help(args)do
     banner(TRUE);
-    println("Commands.....:");
-    println("");
-    println("  help       : Show this screen");
-    println("  cls        : Clear screen");
-    println("  ver        : Show version");
-    println("  shutdown   : Shutdown HUSIS");
-    println("  echo       : Print text on screen");
+    io_println("Commands.....:");
+    io_println("");
+    io_println("  help       : Show this screen");
+    io_println("  cls        : Clear screen");
+    io_println("  ver        : Show version");
+    io_println("  shutdown   : Shutdown HUSIS");
+    io_println("  echo       : Print text on screen");
+    io_println("  mem        : Print current memory status on screen");
+    io_println("  type       : Print file contents on screen");
 end
 
 exec_cmd(cmd, args)do
-    var file::128, ret;
+    var file::128, ret, dirs, i;
+    dirs := ["/System/", "/Programs/", %1];
     if(str_len(cmd) > 0)do
         ie(str_equal(cmd, "cls")) do
             t.writeln(T3X.SYSOUT, "\ec");
@@ -209,25 +444,36 @@ exec_cmd(cmd, args)do
         end
         else ie(str_equal(cmd, "help")) cmd_help(args);
         else ie(str_equal(cmd, "ver")) cmd_ver(args);
+        else ie(str_equal(cmd, "mem")) cmd_mem(args);
         else ie(str_equal(cmd, "shutdown")) cmd_shutdown(args);
+        else ie(str_equal(cmd, "type")) cmd_type(args);
+        else ie(str_equal(cmd, "exit")) halt 0;
         else ie(str_equal(cmd, "?")) cmd_help(args);
         else do 
-            str_copy(file, "/Programs/");
-            str_concat(file, cmd);
-            str_concat(file, ".com");
-            ret := t.int86ax(0x79, 3,file,args,0, 0,0);
-            t.bochsbrk();
-            ie(ret = %1)do
+            i := 0;
+            banner(TRUE);
+            while(dirs[i] \= %1)do
+                str_copy(file, dirs[i]);
+                str_concat(file, cmd);
+                str_concat(file, ".com");
+                ret := t.int86ax(0x79, 3,file,args,0, 0,0);
+                ie(ret = %1)do end
+                else ie(ret = %2)do
+                    t.writes(T3X.SYSERR, "Out of memory");
+                    leave;
+                end
+                else ie(ret \= 0) do
+                    t.writes(T3X.SYSOUT, "\r\nReturn.......: ");
+                    t.writenum(T3X.SYSOUT, ret);
+                    leave;
+                end
+                else leave;
+                i := i + 1;
+            end
+            if(ret = %1)do
                 t.writes(T3X.SYSERR, "Command \q");
                 t.writes(T3X.SYSERR, cmd);
                 t.writeln(T3X.SYSERR, "\q not found");
-            end
-            else ie(ret = %2)do
-                t.writes(T3X.SYSERR, "Out of memory");
-            end
-            else if(ret \= 0) do
-                t.writes(T3X.SYSOUT, "\r\nReturn.......: ");
-                t.writenum(T3X.SYSOUT, ret);
             end
         end
     end
@@ -240,6 +486,9 @@ end
 do
     var line::128, cmd::20, args::128;
     banner(TRUE); ! Clear screen and print banner
+    if(t.getarg(1, line, 128))do
+        t.writes(T3X.SYSOUT, line);
+    end
     while(%1) do
         banner(FALSE); ! Print banner
         t.writes(T3X.SYSOUT, 
@@ -247,10 +496,6 @@ do
         t.read(T3X.SYSIN, line, 80-16);
         t.writes(T3X.SYSOUT, "\ex00\ey05");
         split_cmd(line, 128, cmd, 20, args, 128);
-        t.writes(T3X.SYSOUT, 
-            "\ef03Executed.....: \ef07");
-        t.writeln(T3X.SYSOUT, 
-            line);
         exec_cmd(cmd, args);
     end
 end

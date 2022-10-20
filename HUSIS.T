@@ -713,8 +713,8 @@ end
 mem_defrag() do
 ! Find and merge free blocks
     var seg, prev_seg, eol;
-    if(t.fargetb(seg, MCB_TYPE_B) = 'Z') return;
     prev_seg := t.fargetw(t.local(), @MemFirstSegment);
+    if(t.fargetb(prev_seg, MCB_TYPE_B) = 'Z') return;
     seg := t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + prev_seg + 1;
     eol := false;
     while(\eol) do
@@ -740,7 +740,7 @@ mem_defrag() do
             );
             t.farsetw(seg, MCB_PROCESS_W, 0xffff);
         end
-        else if(t.fargetw(seg, MCB_PROCESS_W) \= 0) prev_seg := seg;
+        else  prev_seg := seg;
         seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
     end
 end
@@ -1174,6 +1174,89 @@ fs_open_file(address, stream) do
     end
     if(ok = FALSE) return FALSE;
     return fs_open_item(item, stream);
+end
+
+fs_open_dir(address, item_dir) do
+! Open dir from address
+! Accepted address format:
+!  [FS]/DIR/DIR/FILE
+! OR
+!  /DIR/DIR/FILE
+!
+!  - FS = Number of File System, started in 0
+!  - DIR or FILE = Name
+    var fsobj[OBJ_FS], fs, item[OBJ_ITEM], i, j, ok, name::32, name_len, dir;
+    var old_item[OBJ_ITEM];
+    fs := FSCurrent;
+    ok := FALSE;
+    i := 0;
+    if(address::0 = '[') do
+        fs := 0;
+        for(i=1,str_len(address)) do
+            if(address::i = ']') leave;
+            if(\char_is_num(address::i)) return FALSE;
+            fs := (fs * 10) + (address::i - '0');
+        end
+        i := i + 1;
+    end
+    ! Load file system
+    t.farcopy
+    (
+        t.stack(), 
+        fsobj,
+        t.local(), 
+        t.fargetw(t.local(),t.fargetw(t.local(),@FSList)) + (fs << 1), 
+        OBJ_FS << 1
+    );
+    if(fsobj[FS_STATUS] \= STATUS_FS_MOUNTED) return FALSE;
+    if(address::i \= '/') return FALSE;
+    i := i + 1;
+    dir := 0;
+    name_len := 0;
+    name::name_len := 0;
+    for(i = i, str_len(address)) do
+        ie(address::i = '/') do
+            ok := FALSE;
+            j := fs_first(fsobj[FS_ID], dir, item);
+            while(j) do
+                str_to_lower(name);
+                str_to_lower(item[ITEM_NAME]);
+                if(str_equal(name, item[ITEM_NAME])) do
+                    ok := TRUE;
+                    dir := item[ITEM_ID];
+                    t.memcopy(old_item, item, OBJ_ITEM << 1);
+                    leave;
+                end
+                j := fs_next(fsobj[FS_ID], item);
+            end
+            if(ok = FALSE) return FALSE;
+            name_len := 0;
+            name::name_len := 0;
+        end
+        else do
+            if(name_len = 31) return FALSE;
+            name::name_len := address::i;
+            name_len := name_len + 1;
+            name::name_len := 0;
+        end
+    end
+    if(name_len > 0) do
+        ok := FALSE;
+        j := fs_first(fsobj[FS_ID], dir, item);
+        while(j) do
+            str_to_lower(name);
+            str_to_lower(item[ITEM_NAME]);
+            if(str_equal(name, item[ITEM_NAME])) do
+                ok := TRUE;
+                dir := item[ITEM_ID];
+                leave;
+            end
+            j := fs_next(fsobj[FS_ID], item);
+        end
+    end 
+    if(ok = FALSE) return FALSE;
+    t.memcopy(item_dir, item, OBJ_ITEM << 1);
+    return TRUE;
 end
 
 ! ==========================================================================
@@ -2099,8 +2182,54 @@ int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
     else ie(ax = 15) do ! Write line text on SYSERR
         t.writeln(T3X.SYSERR, bx);
     end
+    else ie(ax = 16) do ! Write fixed size text on SYSOUT
+        t.write(T3X.SYSOUT, bx, cx);
+    end
+    else ie(ax = 17) do ! Write fixed size text on SYSERR
+        t.write(T3X.SYSERR, bx, cx);
+    end
+    else ie(ax = 18) do ! Write char on SYSOUT
+        t.writec(T3X.SYSOUT, bx);
+    end
+    else ie(ax = 19) do ! Write char on SYSERR
+        t.writec(T3X.SYSERR, bx);
+    end
     else ie(ax = 20) do ! Read line from SYSIN
         t.read(T3X.SYSIN, bx, cx);
+    end
+    else ie(ax = 30) do ! Read free memory in KiB
+        ax := mem_calc_free_kib();
+    end
+    else ie(ax = 31) do ! Read free memory in Segments
+        ax := mem_calc_free();
+    end
+    else ie(ax = 40) do ! Open Dir [bx=Address, cx=Obj Dir Item]
+        ax := fs_open_dir(bx, cx);
+    end
+    else ie(ax = 41) do ! First item [bx=Obj Dir Item, cx=Obj Item]
+        ax := fs_first(bx[ITEM_FS], bx[ITEM_ID], cx);
+    end
+    else ie(ax = 42) do ! Next item [bx=Obj Item]
+        ax := fs_next(bx[ITEM_FS], bx);
+    end
+    else ie(ax = 43) do ! Open Item
+        ax := fs_open_item(bx, cx);
+    end
+    else ie(ax = 44) do ! Open File
+        ax := fs_open_file(bx, cx);
+    end
+    else ie(ax = 45) do ! Copy item [bx=Orig, cx=Dest]
+        t.memcopy(cx, bx, OBJ_ITEM << 1);
+        ax := TRUE;
+    end
+    else ie(ax = 50) do ! Read from Stream [bx=Stream, cx=Dest, dx=Len]
+        ax := stream_read(bx, cx, dx);
+    end
+    else ie(ax = 51) do ! Read from Stream [bx=Stream, cx=Orig, dx=Len]
+        ax := stream_write(bx, cx, dx);
+    end
+    else ie(ax = 52) do ! Read from Stream [bx=Stream]
+        ax := stream_close(bx);
     end
     else
         int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
@@ -2115,7 +2244,9 @@ end
 int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
 ! DOS API (DS,ES,SS,SP from Application)
     var func, al, preserve, tmp[OBJ_STREAM], tmp_ptr;
-    var proc_ip, proc_seg, proc_sp, proc_bp, proc_cs;
+    var proc_ip, proc_seg, proc_sp, proc_bp, proc_cs, proc, parent;
+    proc := process_get_current();
+    parent := process_get_parent(proc);
     func := ax >> 8;
     al := ax & 0xff;
     ie(func = 0x40) do ! DOS WRITE
@@ -2149,15 +2280,15 @@ int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
     end
     else ie(func = 0x4c) do ! EXIT
-        process_set_status(process_get_current(), STATUS_PROCESS_EMPTY);
-        mem_free_process(process_get_current());
-        process_set_current(process_get_parent(process_get_current()));
-        proc_bp := process_get_bp(process_get_current());
-        proc_cs := process_get_cs(process_get_current());
-        proc_ip := process_get_ip(process_get_current());
-        proc_sp := process_get_sp(process_get_current());
-        proc_seg := process_get_seg(process_get_current());
-        process_set_ret(process_get_current(), ax & 0xff);
+        process_set_status(proc, STATUS_PROCESS_EMPTY);
+        mem_free_process(proc);
+        process_set_current(parent);
+        proc_bp := process_get_bp(parent);
+        proc_cs := process_get_cs(parent);
+        proc_ip := process_get_ip(parent);
+        proc_sp := process_get_sp(parent);
+        proc_seg := process_get_seg(parent);
+        process_set_ret(parent, ax & 0xff);
         t.bochsbrk();
         t.jmpstack(proc_seg, proc_sp, proc_bp, proc_cs, proc_ip);
     end
@@ -2325,12 +2456,10 @@ do
         if(t.getarg(5, arg, 64) = 0) 
             fatal_error(
             "Shell missing. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH");
-        !if(\fs_open_file("/Programs/Hello2.com", stream)) fatal_error("Hello2 file not found.");
-        !com_exec(stream, "");
         t.writes(T3X.SYSOUT, "Loading ");
         t.writeln(T3X.SYSOUT, arg);
         if(\fs_open_file(arg, stream)) fatal_error("Shell file not found.");
-        com_exec(stream, "");
+        com_exec(stream, "/System/Autoexec.hsh");
     end
     else do
         fatal_error(
