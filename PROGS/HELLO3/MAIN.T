@@ -20,6 +20,11 @@ do
     io_printnum(husis_other_seg(husis_parent_id()));
     io_printenter();
 
+    io_print("DOS API Test......: ");
+    t.writes(T3X.SYSOUT, "[ SYSOUT OK ]");
+    t.writes(T3X.SYSERR, "[ SYSERR OK ]");
+    io_printenter();
+
     io_print("Press ENTER to continue");
     io_readln(tmp, 0);
 

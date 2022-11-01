@@ -1,0 +1,21 @@
+-= Build HUSIS =-
+-= Boot Loader for 360 KiB Floppy =-
+Old-School Assembler para BIOS v1.17 [PT-BR]
+ Copyright (c) 1991-2011, Venkat Iyer
+ Copyright (c) 2019-2022, Humberto Costa dos Santos Junior
+
+ Incluindo arquivo BOOT.S
+-= Boot Loader for 1440 KiB Floppy =-
+Old-School Assembler para BIOS v1.17 [PT-BR]
+ Copyright (c) 1991-2011, Venkat Iyer
+ Copyright (c) 2019-2022, Humberto Costa dos Santos Junior
+
+ Incluindo arquivo BOOT.S
+-= Hello World S86 PRG =-
+-= Hello World S86 COM =-
+-= Hello World T3X COM =-
+Text = 5950, Data = 622, Symbols = 178, Nlist = 2063, Labels = 161
+-= Shell =-
+Text = 8813, Data = 622, Symbols = 189, Nlist = 2165, Labels = 271
+-= HUSIS Kernel =-
+Text = -31693, Data = 7928, Symbols = 346, Nlist = 4314, Labels = 711

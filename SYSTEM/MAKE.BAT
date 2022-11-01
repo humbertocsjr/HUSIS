@@ -1,7 +1,13 @@
+echo -= DOS API =- >> ..\MAKE.LOG
+..\bin\OSASMPRG DOSAPI >> ..\MAKE.LOG
+
+echo -= CGA Video Controller =- >> ..\MAKE.LOG
+..\bin\OSASMPRG CGA >> ..\MAKE.LOG
+
+echo -= EGA Video Controller =- >> ..\MAKE.LOG
+..\bin\OSASMPRG EGA >> ..\MAKE.LOG
+
 echo -= Shell =- >> ..\MAKE.LOG
-echo ! DONT EDIT THIS FILE > SHELL.T
-echo ! DONT EDIT THIS FILE >> SHELL.T
-echo ! DONT EDIT THIS FILE >> SHELL.T
-type ..\LIBHUSIS.T >> SHELL.T
+type ..\LIBHUSIS.T > SHELL.T
 type SHELL\MAIN.T >> SHELL.T
 ..\bin\t SHELL >> ..\MAKE.LOG

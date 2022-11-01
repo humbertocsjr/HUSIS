@@ -7,27 +7,28 @@
 jmp start
 
 msg:
-    db "Hello World!",0
+    db "Hello World.",0
 
 start:
+    xchg bx,bx
     ; Read Process ID
-    mov ax, 4
+    mov ax, 302
     int $79
     ; Print number
     mov bx, ax
-    mov ax, 12
+    mov ax, 103
     int $79
 
     ; Read Parent ID
-    mov ax, 5
+    mov ax, 309
     int $79
     ; Print number
     mov bx, ax
-    mov ax, 12
+    mov ax, 103
     int $79
 
     ; Print string using HUSIS
-    mov ax, 10
+    mov ax, 102
     mov bx, @msg
     int $79
 

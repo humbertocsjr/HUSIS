@@ -1,3 +1,20 @@
+!
+! DONT EDIT THIS FILE
+!
+! DONT EDIT THIS FILE
+!
+! DONT EDIT THIS FILE
+!
+! DONT EDIT THIS FILE
+!
+! DONT EDIT THIS FILE
+!
+! DONT EDIT THIS FILE
+!
+
+
+
+
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -7,22 +24,85 @@ const TRUE = %1;
 const FALSE = 0;
 
 ! ==========================================================================
+! Memory Management
+! ==========================================================================
+
+mem_calc_free_kib() return t.int86ax(0x79, 400,0,0,0, 0,0);
+mem_calc_free() return t.int86ax(0x79, 401,0,0,0, 0,0);
+mem_size(segment) return t.int86ax(0x79, 402,segment,0,0, 0,0);
+
+! ==========================================================================
+! Video API
+! ==========================================================================
+
+video_can_show_colors() 
+    return t.int86ax(0x82, 2,0,0,0, 0,0);
+video_can_customize() 
+    return t.int86ax(0x82, 1,0,0,0, 0,0);
+video_cls() 
+    return t.int86ax(0x82, 3,0,0,0, 0,0);
+video_write_char(char) 
+    return t.int86ax(0x82, 4,char,0,0, 0,0);
+video_write_string(str) 
+    return t.int86ax(0x82, 5,str,0,0, 0,0);
+video_goto(x, y) 
+    return t.int86ax(0x82, 6,x,y,0, 0,0);
+video_set_font8x8(font) 
+    return t.int86ax(0x82, 7,font,0,0, 0,0);
+video_get_height() 
+    return t.int86ax(0x82, 8,0,0,0, 0,0);
+video_get_width() 
+    return t.int86ax(0x82, 9,0,0,0, 0,0);
+video_write_char_color(char) 
+    return t.int86ax(0x82, 10,char,0,0, 0,0);
+
+! ==========================================================================
+! Kernel I/O
+! ==========================================================================
+
+kernel_print(str) t.int86ax(0x79, 101,str,0,0, 0,0);
+kernel_println(str) t.int86ax(0x79, 102,str,0,0, 0,0);
+kernel_printenter() t.int86ax(0x79, 105,0,0,0, 0,0);
+kernel_printnum(str) t.int86ax(0x79, 103,str,0,0, 0,0);
+kernel_printfixed(str, len) t.int86ax(0x79, 100,str,len,0, 0,0);
+kernel_printchar(char) t.int86ax(0x79, 106,char,0,0, 0,0);
+
+
+! ==========================================================================
 ! Standard I/O
 ! ==========================================================================
 
-io_print(str) t.int86ax(0x79, 10,str,0,0, 0,0);
-io_error(str) t.int86ax(0x79, 11,str,0,0, 0,0);
-io_println(str) t.int86ax(0x79, 14,str,0,0, 0,0);
-io_errorln(str) t.int86ax(0x79, 15,str,0,0, 0,0);
-io_printenter() t.int86ax(0x79, 14,"",0,0, 0,0);
-io_errorenter() t.int86ax(0x79, 15,"",0,0, 0,0);
-io_printnum(str) t.int86ax(0x79, 12,str,0,0, 0,0);
-io_errornum(str) t.int86ax(0x79, 13,str,0,0, 0,0);
-io_printfixed(str, len) t.int86ax(0x79, 16,str,len,0, 0,0);
-io_errorfixed(str, len) t.int86ax(0x79, 17,str,len,0, 0,0);
-io_printchar(char) t.int86ax(0x79, 18,char,0,0, 0,0);
-io_errorchar(char) t.int86ax(0x79, 19,char,0,0, 0,0);
-io_readln(dest, len) return t.int86ax(0x79, 20,dest,len,0, 0,0);
+io_cls() t.int86ax(0x81, 100,0,0,0, 0,0);
+io_print(str) t.int86ax(0x81, 102,str,0,0, 0,0);
+io_error(str) t.int86ax(0x81, 105,str,0,4, 0,0);
+io_println(str) t.int86ax(0x81, 103,str,0,0, 0,0);
+io_errorln(str) t.int86ax(0x81, 106,str,0,4, 0,0);
+io_printenter() t.int86ax(0x81, 109,0,0,0, 0,0);
+io_errorenter() t.int86ax(0x81, 109,0,0,0, 0,0);
+io_printnum(str) t.int86ax(0x81, 107,str,0,0, 0,0);
+io_errornum(str) t.int86ax(0x81, 108,str,0,0, 0,0);
+io_printfixed(str, len) t.int86ax(0x81, 101,str,len,0, 0,0);
+io_errorfixed(str, len) t.int86ax(0x81, 104,str,len,4, 0,0);
+io_printchar(char) t.int86ax(0x81, 110,char,0,0, 0,0);
+io_errorchar(char) t.int86ax(0x81, 111,char,0,4, 0,0);
+io_avail() return t.int86ax(0x81, 112,0,0,0, 0,0);
+io_readchar() return t.int86ax(0x81, 113,0,0,0, 0,0);
+io_readln(dest, len) return t.int86ax(0x81, 114,dest,len,0, 0,0);
+
+! ==========================================================================
+! User Interface API
+! ==========================================================================
+
+ui_new(control, type) t.int86ax(0x81, 200,control,type,0, 0,0);
+ui_render(control) t.int86ax(0x81, 201,control,0,0, 0,0);
+ui_destroy(control) t.int86ax(0x81, 202,control,0,0, 0,0);
+ui_attach(control, parent) t.int86ax(0x81, 203,control,0,0, 0,0);
+ui_attach_window(control) t.int86ax(0x81, 204,control,0,0, 0,0);
+ui_show(control) t.int86ax(0x81, 205,control,0,0, 0,0);
+ui_hide(control) t.int86ax(0x81, 205,control,0,0, 0,0);
+
+ui_new_type(type,ptr_render,ptr_focus,ptr_key,ptr_mouse)
+    t.int86ax(0x81, 300,type,ptr_render,ptr_focus, ptr_key,ptr_mouse);
 
 ! ==========================================================================
 ! File
@@ -68,12 +148,17 @@ struct OBJ_ITEM_HEADER =
     ITEM_FS,
     ITEM_NAME;
 
-open_file(address, stream) return t.int86ax(0x79, 44,address,stream,0, 0,0);
-open_dir(address, item) return t.int86ax(0x79, 40,address,item,0, 0,0);
-item_first(dir_item, item) return t.int86ax(0x79, 41,dir_item,item,0, 0,0);
-item_next(dir_item, item) return t.int86ax(0x79, 42,dir_item,item,0, 0,0);
-item_open(item, stream) return t.int86ax(0x79, 43,item,stream,0, 0,0);
-item_copy(item_dest, item_orig) return t.int86ax(0x79, 43,item_orig,item_dest,0, 0,0);
+const OBJ_ITEM = OBJ_ITEM_HEADER + 16; ! 16 Words/32 Bytes to name
+
+open_file(address, stream) return t.int86ax(0x79, 504,address,stream,0, 0,0);
+open_dir(address, item) return t.int86ax(0x79, 503,address,item,0, 0,0);
+item_first(dir_item, item) return t.int86ax(0x79, 505,dir_item,item,0, 0,0);
+item_next(item) return t.int86ax(0x79, 506,item,0,0, 0,0);
+item_open(item, stream) return t.int86ax(0x79, 502,item,stream,0, 0,0);
+item_copy(item_dest, item_orig) return t.int86ax(0x79, 507,item_orig,item_dest,0, 0,0);
+path_get(dest, len) return t.int86ax(0x79, 509,dest,len,0, 0,0);
+path_set(path) return t.int86ax(0x79, 508,path,0,0, 0,0);
+
 
 ! ==========================================================================
 ! Stream I/O
@@ -117,14 +202,15 @@ struct OBJ_STREAM =
     STREAM_AUX9,
     STREAM_AUX10;
 
-stream_readfixed(stream, dest, len) return t.int86ax(0x79, 50,stream,dest,len, 0,0);
-stream_writefixed(stream, orig, len) return t.int86ax(0x79, 51,stream,orig,len, 0,0);
-stream_close(stream) return t.int86ax(0x79, 52,stream,0,0, 0,0);
+stream_readfixed(stream, dest, len) return t.int86ax(0x79, 205,stream,dest,len, 0,0);
+stream_writefixed(stream, orig, len) return t.int86ax(0x79, 206,stream,orig,len, 0,0);
+stream_close(stream) return t.int86ax(0x79, 204,stream,0,0, 0,0);
 stream_buffer_init(buffer, total_len) do
     if(total_len < 10) return FALSE;
     buffer[0] := total_len - 6;
     buffer[1] := 0;
     buffer[2] := 0;
+    buffer[3] := 0;
     return TRUE;
 end
 stream_readln(stream, buffer, dest, dest_len) do
@@ -137,42 +223,58 @@ stream_readln(stream, buffer, dest, dest_len) do
     dest::0 := 0;
     contents := @buffer[3];
     j := buffer[2];
-    for(i=0,dest_len) do
-        if(j = buffer[1]) do
-            buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
-            if(buffer[1] = 0) return i;
-            buffer[2] := 0;
-            j := 0;
+    for(i=0,dest_len-1) do
+        if(j >= buffer[1]) do
+            ie(buffer[1] = buffer[0])do
+                buffer[1] := stream_readfixed(stream, @buffer[3], buffer[0]);
+                if(buffer[1] = 0)do
+                    ie(i > 0)
+                        return TRUE;
+                    else
+                        return FALSE;
+                end
+                buffer[2] := 0;
+                j := 0;
+            end
+            else return (i > 0);
         end
-        if(contents::j = 0) leave;
-        if(contents::j = '\n') leave;
-        if(contents::j \= '\r') do
+        if(contents::j = 0) ie(i > 0) leave; else return FALSE;
+        if(contents::j = '\n')do
+            buffer[2] := j + 1;
+            leave;
+        end
+        ie(contents::j \= '\r') do
             dest::i := contents::j;
-            i := i + 1;
-            dest::i := 0;
+            dest::(i+1) := 0;
         end
+	    else i := i - 1;
         j := j + 1;
         buffer[2] := j;
     end
-    return i;
+    return TRUE;
 end
 
 ! ==========================================================================
 ! Process info
 ! ==========================================================================
 
-husis_process_id() return t.int86ax(0x79, 4,0,0,0, 0,0);
-husis_parent_id() return t.int86ax(0x79, 5,0,0,0, 0,0);
-husis_other_parent_id(id) return t.int86ax(0x79, 6,0,0,0, 0,0);
-husis_other_seg(id) return t.int86ax(0x79, 6,1,id,0, 0,0);
-husis_other_ip(id) return t.int86ax(0x79, 6,2,id,0, 0,0);
-husis_other_sp(id) return t.int86ax(0x79, 6,3,id,0, 0,0);
-husis_other_bp(id) return t.int86ax(0x79, 6,4,id,0, 0,0);
-husis_other_status(id) return t.int86ax(0x79, 6,5,0,0, 0,0);
+husis_process_id() return t.int86ax(0x79, 302,0,0,0, 0,0);
+husis_parent_id() return t.int86ax(0x79, 309,0,0,0, 0,0);
+husis_other_parent_id(id) return t.int86ax(0x79, 308,id,0,0, 0,0);
+husis_other_seg(id) return t.int86ax(0x79, 304,id,0,0, 0,0);
+husis_other_ip(id) return t.int86ax(0x79, 305,id,0,0, 0,0);
+husis_other_sp(id) return t.int86ax(0x79, 306,id,0,0, 0,0);
+husis_other_bp(id) return t.int86ax(0x79, 307,id,0,0, 0,0);
+husis_other_status(id) return t.int86ax(0x79, 303,id,0,0, 0,0);
 husis_exit(status) return t.int86ax(0x79, 0,status,0,0, 0,0);
-husis_shutdown() return t.int86ax(0x79, 2,0,0,0, 0,0);
-husis_banner(clear_screen) return t.int86ax(0x79, 1,clear_screen,0,0, 0,0);
-husis_exec(file_name, args) return t.int86ax(0x79, 3,file_name,args,0, 0,0);
+husis_exit_main() return t.int86ax(0x79, 2,0,0,0, 0,0);
+husis_shutdown() return t.int86ax(0x79, 1,0,0,0, 0,0);
+husis_exec_com(file_name, args) return t.int86ax(0x79, 300,file_name,args,0, 0,0);
+husis_exec_prg(file_name, args) return t.int86ax(0x79, 301,file_name,args,0, 0,0);
+husis_int_set(old_seg_ptr, int, function) 
+    return t.int86ax(0x79, 3,old_seg_ptr,t.local(),int, function,0);
+husis_int_restore(old_seg_ptr, int) 
+    return t.int86ax(0x79, 4,old_seg_ptr,int,0, 0,0);
 
 ! ==========================================================================
 ! String/Character
@@ -183,6 +285,10 @@ char_is_upper(c) return (c >= 'A') & (c <= 'Z');
 char_is_lower(c) return (c >= 'a') & (c <= 'z');
 char_is_alpha(c) return char_is_lower(c) | char_is_upper(c);
 char_is_alphanum(c) return char_is_alpha(c) | char_is_num(c);
+char_to_upper(c) do
+    if(char_is_lower(c)) return c - 'a' + 'A';
+    return c; 
+end
 char_from_hex(c) do
     ie(char_is_lower(c)) return c - 'a' + 10;
     else ie(char_is_upper(c)) return c - 'A' + 10;
@@ -206,6 +312,49 @@ str_equal(txt1, txt2)
 ! Compare strings returning true if equals
     return t.memcomp(txt1, txt2, str_len(txt1)+1) = 0;
 
+str_from_num(str, len, num) do
+! Convert number to string
+    var i, j;
+    ie(num > 9999) i := 5;
+    else ie(num > 999) i := 4;
+    else ie(num > 99) i := 3;
+    else ie(num > 9) i := 2;
+    else i:= 1;
+    str::0 := 0;
+    if((i+1) > len) return FALSE;
+    if(num < 0) do
+        i := i + 1;
+        str::0 := '-';
+        str::1 := 0;
+    end
+    for(j=0,i) do
+        str::(i-j) := (num mod 10) + '0';
+        str::(i-j+1) := 0;
+        num := num / 10;
+        if(num = 0) leave;
+    end
+    return TRUE;
+end
+
+str_from_num_fixed(str, len, num) do
+! Convert number to string
+    var i, j;
+    i := len;
+    for(j=0,len) do
+        str::j := '0';
+        str::(j+1) := 0;
+    end
+    if(num < 0) do
+        str::0 := '-';
+    end
+    for(j=0,i) do
+        str::(i-j-1) := (num mod 10) + '0';
+        num := num / 10;
+        if(num = 0) leave;
+    end
+    return TRUE;
+end
+
 str_to_num2(str, num) do
 ! Convert string to number with initial value
     var ret, c;
@@ -219,6 +368,48 @@ str_to_num2(str, num) do
 end
 
 str_to_num(str) return str_to_num2(str, 0);
+! Convert string to number
+
+str_to_hex2(str, num) do
+! Convert string to number with initial value
+    var ret, c;
+    ret := num;
+    c := str::0;
+    ie(char_is_num(c)) do
+        ret := (ret * 10) + (c - '0');
+        ret := str_to_hex2(@str::1, ret);
+    end
+    else ie((c >= 'a') &(c <= 'f')) do
+        ret := (ret * 10) + (c - 'a' + 10);
+        ret := str_to_hex2(@str::1, ret);
+    end
+    else if((c >= 'A') &(c <= 'F')) do
+        ret := (ret * 10) + (c - 'A' + 10);
+        ret := str_to_hex2(@str::1, ret);
+    end
+    return ret;
+end
+
+str_to_hex(str) return str_to_hex2(str, 0);
+! Convert string to number
+
+str_to_binary2(str, num) do
+! Convert string to number with initial value
+    var ret, c;
+    ret := num;
+    c := str::0;
+    ie(c = '0') do
+        ret := (ret << 1);
+        ret := str_to_binary2(@str::1, ret);
+    end
+    else if(c = 1) do
+        ret := (ret << 1) + 1;
+        ret := str_to_binary2(@str::1, ret);
+    end
+    return ret;
+end
+
+str_to_binary(str) return str_to_binary2(str, 0);
 ! Convert string to number
 
 str_to_upper(str) do
@@ -244,6 +435,8 @@ str_to_lower(str) do
         i := i + 1;
     end
 end
+
+str_endswith(str, search) return str_equal(str+str_len(str)-str_len(search), search);
 
 rstr_len(seg, txt) 
 ! Get ASCIZ string length from remote string
@@ -327,3 +520,4 @@ t.writenum(file, value) do
     if (tmp2 > 0) t.writenum(file, tmp2);
     t.writec(file, tmp + '0'); 
 end
+

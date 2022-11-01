@@ -3,7 +3,7 @@ ConstSetoresPorTrilha = 18
 .include BOOT.S
 
 | Argumentos Extras
-.ascii "80 2 18 /System/Shell.com"
+.ascii "80 2 18 /System/Autoexec.hsh"
 .byte 13
 .byte 0
 

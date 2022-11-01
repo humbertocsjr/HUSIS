@@ -1,10 +1,7 @@
 all:
 	dosbox -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "mount c: ./" -C "cls" -C "c:" -C "make" -exit
-	@! grep -E 'Error|error|erro' MAKE.LOG
-	@echo -= Build Complete =-
 
 img:
-	mkdir -p TMP
 	dd if=/dev/zero of=1440.IMG bs=1024 count=1440
 	mkfs.minix 1440.IMG -1 -n30
 	dd if=BOOT/BOOT1440.SYS of=1440.IMG bs=1024 count=1 conv=notrunc
@@ -23,20 +20,12 @@ img_copy:
 	sudo mkdir TMP/Programs
 	sudo mkdir TMP/Documents
 	sudo mkdir TMP/Library
-	sudo mkdir TMP/Config
 	sudo mkdir TMP/System
 	sudo cp AUTOEXEC.HSH TMP/System/Autoexec.hsh
 	sudo cp PROGS/HELLO1.PRG TMP/Programs/Hello1.prg
 	sudo cp PROGS/HELLO2.COM TMP/Programs/Hello2.com
 	sudo cp PROGS/HELLO3.COM TMP/Programs/Hello3.com
 	sudo cp SYSTEM/SHELL.COM TMP/System/Shell.com
-	sudo cp SYSTEM/DOSAPI.PRG TMP/System/DOSAPI.prg
-	sudo cp SYSTEM/CGA.PRG TMP/System/CGA.prg
-	sudo cp SYSTEM/EGA.PRG TMP/System/EGA.prg
-	sudo cp SYSTEM/SPLASH.TXT TMP/System/Splash.txt
-	sudo cp SYSTEM/BOLD.FON TMP/System/Bold.fon
-	sudo cp SYSTEM/BOLD.FON TMP/System/Default.fon
-	sudo cp SYSTEM/DRAW.FON TMP/System/Draw.fon
 	sudo cp BIN/T.COM TMP/Programs/T.com
 	sudo cp BIN/S86.COM TMP/Programs/S86.com
 	sudo cp BIN/OSASMCOM.COM TMP/Programs/OSAsmCOM.com

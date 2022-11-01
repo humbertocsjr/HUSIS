@@ -1,4 +1,4 @@
-! HUSIS - Kernel
+! HUSIS - Modular Kernel
 ! Humberto Costa dos Santos Junior, 2022
 ! 3-Clause BSD license
 ! Operating System for IBM PC and compatibles
@@ -6,6 +6,8 @@
 !  This Operating System implements minimum INT 0x21 function set to run 
 !  T3X/86 applications and Old-School Assembler without modifications.
 !
+!  This is a reorganization and simplification of original HUSIS Kernel, to 
+!  keep kernel under 40 KiB.
 
 const VERSION = 0;
 const SUB_VERSION = 5;
@@ -13,6 +15,7 @@ const REVISION = 0;
 
 const TRUE = %1;
 const FALSE = 0;
+
 
 var Mode;
 const MODE_STANDALONE = 1; ! Running as Operating System
@@ -98,6 +101,8 @@ str_to_lower(str) do
     end
 end
 
+str_endswith(str, search) return str_equal(str+str_len(str)-str_len(search), search);
+
 rstr_len(seg, txt) 
 ! Get ASCIZ string length from remote string
     return t.farscan(seg, txt, 0, 2048);
@@ -134,52 +139,6 @@ end
 rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! Convert remote string to number
 
-! ==========================================================================
-! Generic functions
-! ==========================================================================
-
-t.writes(file, str) t.write(file, str, str_len(str));
-! Write string to file
-
-t.rwrites(file, seg, str) do
-! Write string to file
-    var tmp::128;
-    t.farcopy(t.stack(), tmp, seg, str, 128);
-    t.write(file, tmp, str_len(tmp));
-end
-
-t.writeln(file, str) do
-! Write line string to file
-    t.write(file, str, str_len(str));
-    t.rwrites(file, t.local(), "\r\n");
-end
-
-t.rwriteln(file, seg, str) do
-! Write line string to file
-    t.rwrites(file, seg, str);
-    t.rwrites(file, t.local(), "\r\n");
-end
-
-t.writec(file, c) do
-! Write char to file
-    var str::2;
-    str::0 := c;
-    str::1 := 0;
-    t.write(file, str, 1);
-end
-
-t.writenum(file, value) do
-! Write number to file
-    var tmp, tmp2;
-    if(value < 0) do
-        t.writec(file, '-');
-        value := -value;
-    end
-    tmp := value mod 10;
-    tmp2 := value / 10;
-    if (tmp2 > 0) t.writenum(file, tmp2);
-    t.writec(file, tmp + '0'); 
-end
 
 ! ==========================================================================
 ! I/O STREAM (Generic API)
@@ -385,274 +344,162 @@ stream_write_hex(stream, value) do
     else stream_write_char(stream, tmp + 'a' - 10);
 end
 
+stream_buffer_init(buffer, total_len) do
+! Initialize stream buffer
+    if(total_len < 10) return FALSE;
+    buffer[0] := total_len - 6;
+    buffer[1] := 0;
+    buffer[2] := 0;
+    buffer[3] := 0;
+    return TRUE;
+end
+
+stream_readln(stream, buffer, dest, dest_len) do
+! Read line using buffer
+    var i, j, contents;
+    if(buffer[1] = 0) do
+        buffer[1] := stream_read(stream, @buffer[3], buffer[0]);
+        if(buffer[1] = 0) return FALSE;
+        buffer[2] := 0;
+    end
+    dest::0 := 0;
+    contents := @buffer[3];
+    j := buffer[2];
+    for(i=0,dest_len-1) do
+        if(j >= buffer[1]) do
+            ie(buffer[1] = buffer[0])do
+                buffer[1] := stream_read(stream, @buffer[3], buffer[0]);
+                if(buffer[1] = 0)do
+                    ie(i > 0)
+                        return TRUE;
+                    else
+                        return FALSE;
+                end
+                buffer[2] := 0;
+                j := 0;
+            end
+            else return (i > 0);
+        end
+        if(contents::j = 0) ie(i > 0) leave; else return FALSE;
+        if(contents::j = '\n')do
+            buffer[2] := j + 1;
+            leave;
+        end
+        ie(contents::j \= '\r') do
+            dest::i := contents::j;
+            dest::(i+1) := 0;
+        end
+	    else i := i - 1;
+        j := j + 1;
+        buffer[2] := j;
+    end
+    return TRUE;
+end
+
 ! ==========================================================================
-! Terminal I/O using Stream API
+! Terminal I/O
 ! ==========================================================================
 struct COLORS = BLACK, DARK_BLUE, DARK_GREEN, DARK_CYAN, DARK_RED,
                 DARK_MAGENTA, BROWN, DARK_GRAY, LIGHT_GRAY,
                 LIGHT_BLUE, LIGHT_GREEN, LIGHT_CYAN, LIGHT_RED, LIGHT_MAGENTA, 
                 LIGHT_YELLOW, WHITE;
 
-const TERM_X = STREAM_AUX1;
-const TERM_Y = STREAM_AUX2;
-const TERM_COLORS = STREAM_AUX3;
-const TERM_CMD = STREAM_AUX4;
-const TERM_CMD_POS = STREAM_AUX5;
-const TERM_VALUE = STREAM_AUX6;
-const TERM_VALUE_B = STREAM_AUX7;
 
-term_cls(stream) do
-! Clear screen
-    var i;
-    stream[TERM_CMD_POS] := 0;
-    stream[TERM_Y] := 0;
-    stream[TERM_X] := 0;
-    stream[STREAM_PTR_BUFFER] := 0;
-    t.farfillw(stream[STREAM_SEG_BUFFER], 0, stream[TERM_COLORS]|' ', 80*25);
-end
-
-term_calc_pos(stream, x, y) do
-! Calculate new position
-    stream[TERM_X] := x;
-    stream[TERM_Y] := y;
-    stream[STREAM_PTR_BUFFER] := (stream[TERM_Y] * 80 + stream[TERM_X]) << 1;
-    if(stream[TERM_X] > 79) do
-        stream[TERM_X] := stream[TERM_X] - 80;
-        stream[TERM_Y] := stream[TERM_Y] + 1;
-    end
-    if(stream[TERM_Y] > 24) do
-        stream[STREAM_PTR_BUFFER] := 0;
-        stream[TERM_Y] := 0;
-    end
-end
-
-term_colors_set(stream, fore, back) do
-! Set new colors to output
-    stream[TERM_COLORS] := (back << 12) | (fore << 8);
-end
-
-term_color_fore(stream, fore) do
-! Set fore color
-    stream[TERM_COLORS] := (stream[TERM_COLORS] & 0xf000) | (fore << 8);
-end
-
-term_color_back(stream, back) do
-! Set back color
-    stream[TERM_COLORS] :=  (stream[TERM_COLORS] & 0x0f00) | (back << 12);
-end
-
-term_write_char(stream, c) do
+term_write_char(c) do
 ! Write char to screen
-!
-! Special escape commands:
-! \ec       = Clear screen
-! \el       = Clear current line and set x = 0
-! \ex00     = Set X position (00-80)
-! \ey00     = Set Y position (00-25)
-! \ef00     = Set fore color (00-15)
-! \eb00     = Set back color (00-15)
-! \er00C    = Repeat C character 00 times (00-99)
-! \eR00HH   = Repeat HH(Hex) character 00 times (00-FF)
-!
-    var i, y;
-    if(c = '\e') do
-    stream[TERM_CMD_POS] := 1;
-    return;
-    end
-    if(stream[TERM_CMD_POS] > 0) do
-        ie(stream[TERM_CMD_POS] = 1) do
-            stream[TERM_VALUE] := 0;
-            stream[TERM_CMD_POS] := 0;
-            stream[TERM_CMD] := c;
-            ie(c = 'c') term_cls(stream);
-            else ie(c = 'l') do
-                y := stream[TERM_Y];
-                term_calc_pos(stream, 0, y);
-                for(i=0,80) term_write_char(stream, ' ');
-                term_calc_pos(stream, 0, y);
-            end            
-            else ie(c = 'f') stream[TERM_CMD_POS] := 2;
-            else ie(c = 'b') stream[TERM_CMD_POS] := 2;
-            else ie(c = 'x') stream[TERM_CMD_POS] := 2;
-            else ie(c = 'y') stream[TERM_CMD_POS] := 2;
-            else ie(c = 'r') stream[TERM_CMD_POS] := 2;
-            else ie(c = 'R') stream[TERM_CMD_POS] := 2;
-            else stream[TERM_CMD_POS] := 0;
-        end 
-        else ie(stream[TERM_CMD_POS] = 2) do
-            stream[TERM_CMD_POS] := 3;
-            if(\char_is_num(c)) stream[TERM_CMD_POS] := 0;
-            stream[TERM_VALUE] := (c - '0') * 10;
-        end
-        else ie(stream[TERM_CMD_POS] = 3) do
-            stream[TERM_CMD_POS] := 0;
-            if(\char_is_num(c)) return;
-            stream[TERM_VALUE] := (c - '0') + stream[TERM_VALUE];
-            ie(stream[TERM_CMD] = 'x') 
-                term_calc_pos(stream, stream[TERM_VALUE], stream[TERM_Y]);
-            else ie(stream[TERM_CMD] = 'y') 
-                term_calc_pos(stream, stream[TERM_X], stream[TERM_VALUE]);
-            else ie(stream[TERM_CMD] = 'r') 
-                stream[TERM_CMD_POS] := 4;
-            else ie(stream[TERM_CMD] = 'R') 
-                stream[TERM_CMD_POS] := 4;
-            else ie(stream[TERM_CMD] = 'f') 
-                term_color_fore(stream, stream[TERM_VALUE]);
-            else ie(stream[TERM_CMD] = 'b') 
-                term_color_back(stream, stream[TERM_VALUE]);
-            else stream[TERM_CMD_POS] := 0;
-        end
-        else ie(stream[TERM_CMD_POS] = 4) do
-            stream[TERM_CMD_POS] := 0;
-            ie(stream[TERM_CMD] = 'r') 
-                for(i=0,stream[TERM_VALUE]) term_write_char(stream, c);
-            else if(stream[TERM_CMD] = 'R') do
-                stream[TERM_VALUE_B] := char_from_hex(c) << 4;
-                stream[TERM_CMD_POS] := 5;
-            end 
-        end
-        else ie(stream[TERM_CMD_POS] = 5) do
-            stream[TERM_CMD_POS] := 0;
-            if(stream[TERM_CMD] = 'R') do
-                stream[TERM_VALUE_B] := stream[TERM_VALUE_B]|char_from_hex(c);
-                for(i=0,stream[TERM_VALUE]) 
-                    term_write_char(stream, stream[TERM_VALUE_B]);
-            end 
-        end
-        else stream[TERM_CMD_POS] := 0;
-        return;
-    end
-    if(c = 13) do
-        term_calc_pos(stream, 0, stream[TERM_Y]);
-        return;
-    end
-    if(c = 10) do
-        term_calc_pos(stream, 0, stream[TERM_Y] + 1);
-        return;
-    end
-    if(c = 8) do
-        ie(stream[TERM_X] = 0)
-            term_calc_pos(stream, 79, stream[TERM_Y] - 1);
-        else
-            term_calc_pos(stream, stream[TERM_X] - 1, stream[TERM_Y]);
-        return;
-    end
-    if(c = 9) do
-        c := ' ';
-    end
-    t.farsetw(
-            stream[STREAM_SEG_BUFFER], 
-            stream[STREAM_PTR_BUFFER], 
-            c | stream[TERM_COLORS]);
-    stream[STREAM_PTR_BUFFER] := stream[STREAM_PTR_BUFFER] + 2;
-    stream[TERM_X] := stream[TERM_X] + 1;
-    if(stream[TERM_X] > 79) do
-        stream[TERM_X] := 0;
-        stream[TERM_Y] := stream[TERM_Y] + 1;
-    end
-    if(stream[TERM_Y] > 24) do
-        stream[STREAM_PTR_BUFFER] := 0;
-        stream[TERM_Y] := 0;
-    end
+    t.int86ax(0x10, 0xe00 | c,0,0,0 ,0,0);
 end
 
-term_read_char(stream) do
+term_write(orig, len) do
+! Write to screen
+    var i;
+    for(i=0,len) do
+        term_write_char(orig::i);
+    end
+end 
+
+term_rwrite(seg, orig, len) do
+! Write to screen
+    var i;
+    for(i=0,len) do
+        term_write_char(t.fargetb(seg, orig + i));
+    end
+end 
+
+term_kwrite(orig, len) do
+! Write to screen
+    var i;
+    for(i=0,len) do
+        term_write_char(t.fargetb(t.local(), orig + i));
+    end
+end 
+
+term_writes(orig) 
+! Write string on screen
+    term_write(orig, str_len(orig));
+
+term_kwrites(orig) 
+! Write string on screen
+    term_kwrite(orig, rstr_len(t.local(),orig));
+
+term_writeln(orig) do
+! Write string on screen
+    term_writes(orig);
+    term_write_char(13);
+    term_write_char(10);
+end
+
+term_kwriteln(orig) do
+! Write string on screen
+    term_kwrites(orig);
+    term_write_char(13);
+    term_write_char(10);
+end
+
+
+term_writenum(value) do
+! Write number to stream
+    var tmp, tmp2;
+    if(value < 0) do
+        term_write_char('-');
+        value := -value;
+    end
+    tmp := value mod 10;
+    tmp2 := value / 10;
+    if (tmp2 > 0) term_writenum(tmp2);
+    term_write_char(tmp + '0'); 
+end
+
+term_writehex(value) do
+! Write Hexadecimal to stream
+    var tmp, tmp2;
+    tmp := value & 15;
+    tmp2 := value >> 4;
+    if (tmp2 > 0) term_writehex(tmp2);
+    ie (tmp < 10) term_write_char(tmp + '0'); 
+    else term_write_char(tmp + 'a' - 10);
+end
+
+term_read_char() do
 ! Read key from keyboard using BIOS
     return t.int86ax(0x16, 0,0,0,0, 0,0) & 0xff;
 end
 
-_term_avail(stream, ret) far do
-! Check if has key avail
-    ret[RET_OK] := (t.int86z(0x16, 0x100,0,0,0, 0,0) = 1) -> 0 : 1;
-    ret[RET_VALUE] := ret[RET_OK] -> 1 : 0;
-end
-
-_term_seek(stream, pos_low, pos_high, ret) ret[RET_OK] := FALSE;
-! (NOT SUPPORTED) Seek on keyboard stream
-
-_term_can_read(stream, ret) far do
-! Return if can read
-    ret[RET_OK] := TRUE;
-end 
-
-_term_read(stream, seg, dest, len, ret) far do
-! Read line string from keyboard showing on screen
-    var pos, c;
-    pos := 0;
-    dest::pos := 0;
-    term_write_char(stream, '_');
-    while(%1) do
-        c := term_read_char(stream);
-        if (c = 0xd) leave;
-        if (c = 0xa) leave;
-        ie (c = 0x8) do
-            if (pos = 0) loop;
-            term_write_char(stream, c);
-            term_write_char(stream, c);
-            term_write_char(stream, '_');
-            term_write_char(stream, ' ');
-            term_write_char(stream, c);
-            pos := pos - 1;
-        end
-        else do
-            if ((pos + 2) > len) loop;
-            dest::pos := c;
-            term_write_char(stream, 8);
-            term_write_char(stream, c);
-            term_write_char(stream, '_');
-            pos := pos + 1;
-        end
-        dest::pos := 0;
-    end
-    term_write_char(stream, 8);
-    term_write_char(stream, ' ');
-    term_write_char(stream, 13);
-    term_write_char(stream, 10);
-    ret[RET_OK] := pos > 0;
-    ret[RET_VALUE] := pos;
-end 
-
-_term_can_write(stream, ret) far do
-! Return if can write
-    ret[RET_OK] := TRUE;
-end 
-
-_term_write(stream, seg, orig, len, ret) far do
-! Write to screen
-    var i;
-    for(i=0,len) do
-        term_write_char(stream, t.fargetb(seg, orig + i));
-    end
-end 
-
-term_new_stream(stream) do
-! Create new Terminal Stream
-    new(stream, t.local(), 
-        @_term_avail, @_term_seek, @_term_can_read, @_term_read,
-        @_term_can_write, @_term_write);
-    buffer_set(stream, 0xb800, 0, 80*25*2);
-    term_calc_pos(stream, 0, 0);
-    term_colors_set(stream, DARK_GRAY, BLACK);
-end
-
 term_init() do
-    ! Hiding cursor
-    t.int86ax(0x10, 0x100,0,0x2020,0,0,0);
-    ! Initialize Standard I/O
-    term_new_stream(StreamIO);
-    StreamIn := StreamIO;
-    StreamOut := StreamIO;
-    StreamErr := StreamIO;
 end
+
 
 ! ==========================================================================
 ! Memory Manager
 ! ==========================================================================
+decl fatal_error(1);
 
-const MCB_TYPE_B = 0;
-const MCB_PROCESS_W = 1;
-const MCB_PARAGRAPHS_W = 3;
-const MCB_NAME_STR = 8;
+const MEM_FULL_CAPACITY = 2560; ! 640KiB / 256B
+
+const MEM_TYPE_EMPTY = 0;
+const MEM_TYPE_PROGRAM = 256;
+const MEM_TYPE_DATA = 512;
+const MEM_TYPE_END = 1024;
 
 var MemFirstSegment;
 
@@ -661,7 +508,7 @@ mem_total_kib() do
     if(t.fargetw(t.local(), @Mode) = MODE_DOS_APP) do
         ! (Get MCB allocated paras(16 bytes block) + Local segment) / 64
         return (
-                (t.fargetw(t.local()-1, MCB_PARAGRAPHS_W) + 
+                (t.fargetw(t.local()-1, 3) + 
                 t.local()) >> 6
             ) & 0x7fff;
     end
@@ -676,110 +523,72 @@ end
 
 mem_init() do
 ! Initialize application memory with first MCB (Use same format of DOS)
+    var start_free;
     MemFirstSegment := t.local() + 4096;
-    t.farsetb(MemFirstSegment, MCB_TYPE_B, 'Z'); 
-        ! M = Commom Block, Z = Last Block
-    t.farsetw(MemFirstSegment, MCB_PROCESS_W, 0); 
-        ! Process ID (Segment)
-    t.farsetw(MemFirstSegment, MCB_PARAGRAPHS_W, (mem_usable_kib() << 6) - 1); 
-        ! Block Size
-    t.farsetb(MemFirstSegment, MCB_NAME_STR, 0); ! Name ASCIZ
-end
+    start_free := ((MemFirstSegment >> 4) + (MEM_FULL_CAPACITY >> 7));
+    t.farfillw(MemFirstSegment, 0, 0, MEM_FULL_CAPACITY);
+    t.farfillw(MemFirstSegment, 0, 0xffff, start_free);
+    t.farfillw(MemFirstSegment, (mem_usable_kib() << 3), 0xffff, 
+        MEM_FULL_CAPACITY - (mem_usable_kib() << 2));
 
-mem_find(initial_seg, process) do
-! Find first segment from process
-    var seg, eol;
-    eol := false;
-    seg := initial_seg;
-    while(\eol) do
-        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
-        if(t.fargetw(seg, MCB_PROCESS_W) = process) do
-            return seg;
-        end
-        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
-    end
-    return 0;
-end
-
-mem_find_next(initial_seg, process) do
-! Find next segment from process
-    if(t.fargetw(initial_seg, MCB_TYPE_B) = 'Z') return 0;
-    return mem_find(
-            1 + initial_seg + t.fargetw(initial_seg, MCB_PARAGRAPHS_W), 
-            process
-        );
-end
-
-mem_defrag() do
-! Find and merge free blocks
-    var seg, prev_seg, eol;
-    prev_seg := t.fargetw(t.local(), @MemFirstSegment);
-    if(t.fargetb(prev_seg, MCB_TYPE_B) = 'Z') return;
-    seg := t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + prev_seg + 1;
-    eol := false;
-    while(\eol) do
-        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
-        ie
-        (
-            (t.fargetw(seg, MCB_PROCESS_W) = 0) &
-            (t.fargetw(prev_seg, MCB_PROCESS_W) = 0)
-        ) 
-        do
-            t.farsetw
-            (
-                prev_seg, 
-                MCB_PARAGRAPHS_W, 
-                t.fargetw(seg, MCB_PARAGRAPHS_W) + 
-                t.fargetw(prev_seg, MCB_PARAGRAPHS_W) + 1
-            );
-            t.farsetb
-            (
-                prev_seg,
-                MCB_TYPE_B,
-                t.fargetb(seg, MCB_TYPE_B)
-            );
-            t.farsetw(seg, MCB_PROCESS_W, 0xffff);
-        end
-        else  prev_seg := seg;
-        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
-    end
 end
 
 mem_size(seg) do
 ! Return size of allocated block in paras
-    return t.fargetw(seg - 1, MCB_PARAGRAPHS_W);
+    var i, map, find, size;
+    map := t.fargetw(t.local(), @MemFirstSegment);
+    find := (t.fargetw(map, seg >> 3) & 0xff);
+    size := 0;
+    for(i=(seg >> 4),MEM_FULL_CAPACITY)do
+        ie((t.fargetw(map, i << 1) & 0xff) = find) do
+            size := size + 1;
+            if((t.fargetw(map, i << 1) & MEM_TYPE_END) = MEM_TYPE_END) leave;
+        end
+        else leave;
+    end
+    return size << 4;
 end
 
 mem_alloc(process, paras) do
 ! Allocate block in application memory (1 para. = 16 Bytes)
 ! Return 0 if fails
-    var seg, next_seg, size;
-    if((paras < 0) | (paras > 8192)) return 0; ! More than 128 KiB
-    seg := mem_find(t.fargetw(t.local(), @MemFirstSegment), 0);
-    while(seg \= 0) do
-        size := mem_size(seg + 1);
-        if((size >= paras) | size < 0) leave;
-        seg := mem_find_next(seg, 0);
+    var size, blocks, first, last, finding;
+    var i, map;
+    blocks := paras >> 4;
+    if((paras & 0xf) > 0)blocks := blocks + 1;
+    if((blocks < 0) | (blocks > 512)) return 0; ! More than 128 KiB
+    map := t.fargetw(t.local(), @MemFirstSegment);
+    size := 0;
+    finding := FALSE;
+    for(i=0,MEM_FULL_CAPACITY)do
+        ie(t.fargetw(map, i << 1) = 0) do
+            ie(\finding)do
+                size := 1;
+                finding := TRUE;
+                first := i;
+                last := i;
+            end
+            else do
+                size := size + 1;
+                last := i;
+            end
+            if(size = blocks) do
+                leave;
+            end
+        end
+        else finding := FALSE;
     end
-    if(seg = 0) return 0;
-    size := t.fargetw(seg, MCB_PARAGRAPHS_W);
-    if
-        (
-            ((size + 5) > paras) |
-            (size < 0) ! More than integer limit
-        )
-    do
-        next_seg := seg + 1 + paras;
-        size := size - paras - 1;
-        t.farsetb(next_seg, MCB_TYPE_B, t.fargetb(seg, MCB_TYPE_B));
-        t.farsetb(seg, MCB_TYPE_B, 'M');
-        t.farsetw(next_seg, MCB_PROCESS_W, 0);
-        t.farsetw(next_seg, MCB_PARAGRAPHS_W, size);
-        t.farsetb(next_seg, MCB_NAME_STR, 0);
-        t.farsetw(seg, MCB_PARAGRAPHS_W, paras);
+    if(\finding) return 0;
+    if(size \= blocks) return 0;
+    for(i=first,last)do
+        ie(i = last) do
+            t.farsetw(map, i << 1, process | MEM_TYPE_END | MEM_TYPE_DATA);
+        end
+        else do
+            t.farsetw(map, i << 1, process | MEM_TYPE_DATA);
+        end
     end
-    t.farsetw(seg, MCB_PROCESS_W, process);
-    return seg + 1;
+    return first << 4;
 end
 
 mem_alloc_seg(process) do
@@ -789,39 +598,42 @@ end
 
 mem_free(seg) do
 ! Free block of application memory
-    t.farsetw(seg - 1, MCB_PROCESS_W, 0);
-    mem_defrag();
+    var i, map, find, size, tmp;
+    map := t.fargetw(t.local(), @MemFirstSegment);
+    find := (t.fargetw(map, seg >> 3) & 0xff);
+    size := 0;
+    for(i=(seg >> 4),MEM_FULL_CAPACITY)do
+        tmp := t.fargetw(map, i << 1);
+        if((tmp & 0xff) = find) do
+            t.farsetw(map, i << 1, 0);
+            if((tmp & MEM_TYPE_END) = MEM_TYPE_END) leave;
+        end
+    end
 end
 
 mem_free_process(process) do
 ! Free all blocks of one process
-    var seg, eol;
-    seg := t.fargetw(t.local(), @MemFirstSegment);
-    eol := false;
-    while(\eol) do
-        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
-        if(t.fargetw(seg, MCB_PROCESS_W) = process) do
-            t.farsetw(seg, MCB_PROCESS_W, 0);
+    var i, map, size;
+    map := t.fargetw(t.local(), @MemFirstSegment);
+    size := 0;
+    for(i=0,MEM_FULL_CAPACITY)do
+        if((t.fargetw(map, i << 1) & 0xff) = process) do
+            t.farsetw(map, i << 1, 0);
         end
-        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
     end
-    mem_defrag();
 end
 
 mem_calc_free() do
 ! Return total free space
-    var total, seg, eol;
-    seg := t.fargetw(t.local(), @MemFirstSegment);
-    eol := false;
-    total := 0;
-    while(\eol) do
-        eol := t.fargetb(seg, MCB_TYPE_B) = 'Z';
-        if(t.fargetw(seg, MCB_PROCESS_W) = 0) do
-            total := total + t.fargetw(seg, MCB_PARAGRAPHS_W);
+    var i, map, size;
+    map := t.fargetw(t.local(), @MemFirstSegment);
+    size := 0;
+    for(i=0,MEM_FULL_CAPACITY)do
+        if(t.fargetw(map, i << 1) = 0) do
+            size := size + 1;
         end
-        seg := 1 + seg + t.fargetw(seg, MCB_PARAGRAPHS_W);
     end
-    return total;
+    return size << 4;
 end
 
 mem_calc_free_kib() do
@@ -963,6 +775,7 @@ end
 ! File System Infrastructure
 ! ==========================================================================
 
+const PATH_LEN = 512;
 const TOTAL_FS = 16;
 
 const STATUS_FS_AVAIL = 0;
@@ -1008,6 +821,7 @@ const OBJ_ITEM = OBJ_ITEM_HEADER + 16; ! 16 Words/32 Bytes to name
 const SIZE_NAME = 30;
 
 var FSList[TOTAL_FS], FSData[OBJ_FS * TOTAL_FS], FSCurrent;
+var FSPath::PATH_LEN;
 
 new_item(item, type, seg, ptr_open, parent_id, id) do
 ! Create file system item
@@ -1045,6 +859,7 @@ fs_init() do
         FSList[i][FS_ID] := i;
         FSList[i][FS_STATUS] := STATUS_FS_AVAIL;
     end
+    str_copy(FSPath, "/");
     FSCurrent := 0;
 end
 
@@ -1095,7 +910,7 @@ fs_next(fs, item) do
     return ret[RET_OK];
 end
 
-fs_open_file(address, stream) do
+fs_open_file(file_address, stream) do
 ! Open file from address
 ! Accepted address format:
 !  [FS]/DIR/DIR/FILE
@@ -1105,8 +920,15 @@ fs_open_file(address, stream) do
 !  - FS = Number of File System, started in 0
 !  - DIR or FILE = Name
     var fsobj[OBJ_FS], fs, item[OBJ_ITEM], i, j, ok, name::32, name_len, dir;
-    var old_item[OBJ_ITEM];
-    fs := FSCurrent;
+    var old_item[OBJ_ITEM], address::PATH_LEN;
+    ie((file_address::0 = '[') | (file_address::0 = '/'))do
+        str_copy(address, file_address);
+    end
+    else do
+        rstr_copy(t.stack(), address, t.local(), @FSPath);
+        str_concat(address, file_address);
+    end
+    fs := t.fargetw(t.local(), @FSCurrent);
     ok := FALSE;
     i := 0;
     if(address::0 = '[') do
@@ -1176,7 +998,7 @@ fs_open_file(address, stream) do
     return fs_open_item(item, stream);
 end
 
-fs_open_dir(address, item_dir) do
+fs_open_dir(dir_address, item_dir) do
 ! Open dir from address
 ! Accepted address format:
 !  [FS]/DIR/DIR/FILE
@@ -1186,8 +1008,15 @@ fs_open_dir(address, item_dir) do
 !  - FS = Number of File System, started in 0
 !  - DIR or FILE = Name
     var fsobj[OBJ_FS], fs, item[OBJ_ITEM], i, j, ok, name::32, name_len, dir;
-    var old_item[OBJ_ITEM];
-    fs := FSCurrent;
+    var old_item[OBJ_ITEM], address::PATH_LEN;
+    ie((dir_address::0 = '[') | (dir_address::0 = '/'))do
+        str_copy(address, dir_address);
+    end
+    else do
+        rstr_copy(t.stack(), address, t.local(), @FSPath);
+        str_concat(address, dir_address);
+    end
+    fs := t.fargetw(t.local(), @FSCurrent);
     ok := FALSE;
     i := 0;
     if(address::0 = '[') do
@@ -1214,8 +1043,38 @@ fs_open_dir(address, item_dir) do
     dir := 0;
     name_len := 0;
     name::name_len := 0;
-    for(i = i, str_len(address)) do
-        ie(address::i = '/') do
+    ie(str_equal(@address::i, "/"))do
+        ok := TRUE;
+        fs_first(fsobj[FS_ID], dir, item); ! First item is allways '.'
+    end
+    else do
+        for(i = i, str_len(address)) do
+            ie(address::i = '/') do
+                ok := FALSE;
+                j := fs_first(fsobj[FS_ID], dir, item);
+                while(j) do
+                    str_to_lower(name);
+                    str_to_lower(item[ITEM_NAME]);
+                    if(str_equal(name, item[ITEM_NAME])) do
+                        ok := TRUE;
+                        dir := item[ITEM_ID];
+                        t.memcopy(old_item, item, OBJ_ITEM << 1);
+                        leave;
+                    end
+                    j := fs_next(fsobj[FS_ID], item);
+                end
+                if(ok = FALSE) return FALSE;
+                name_len := 0;
+                name::name_len := 0;
+            end
+            else do
+                if(name_len = 31) return FALSE;
+                name::name_len := address::i;
+                name_len := name_len + 1;
+                name::name_len := 0;
+            end
+        end
+        if(name_len > 0) do
             ok := FALSE;
             j := fs_first(fsobj[FS_ID], dir, item);
             while(j) do
@@ -1224,38 +1083,31 @@ fs_open_dir(address, item_dir) do
                 if(str_equal(name, item[ITEM_NAME])) do
                     ok := TRUE;
                     dir := item[ITEM_ID];
-                    t.memcopy(old_item, item, OBJ_ITEM << 1);
                     leave;
                 end
                 j := fs_next(fsobj[FS_ID], item);
             end
-            if(ok = FALSE) return FALSE;
-            name_len := 0;
-            name::name_len := 0;
-        end
-        else do
-            if(name_len = 31) return FALSE;
-            name::name_len := address::i;
-            name_len := name_len + 1;
-            name::name_len := 0;
-        end
+        end 
+        if(ok = FALSE) return FALSE;
     end
-    if(name_len > 0) do
-        ok := FALSE;
-        j := fs_first(fsobj[FS_ID], dir, item);
-        while(j) do
-            str_to_lower(name);
-            str_to_lower(item[ITEM_NAME]);
-            if(str_equal(name, item[ITEM_NAME])) do
-                ok := TRUE;
-                dir := item[ITEM_ID];
-                leave;
-            end
-            j := fs_next(fsobj[FS_ID], item);
-        end
-    end 
-    if(ok = FALSE) return FALSE;
+    if(item[ITEM_TYPE] \= TYPE_DIRECTORY) return FALSE;
     t.memcopy(item_dir, item, OBJ_ITEM << 1);
+    return TRUE;
+end
+
+fs_cd(new_path) do
+    var item[OBJ_ITEM];
+    if(new_path > (PATH_LEN - 128)) return FALSE;
+    if(\fs_open_dir(new_path, item)) return FALSE;
+    rstr_copy(t.local(), @FSPath, t.stack(), new_path);
+    if(new_path::(str_len(new_path)-1) \= '/') 
+        rstr_concat(t.local(), @FSPath, t.local(), "/");
+    return TRUE;
+end
+
+fs_pwd(path, len)do
+    if((rstr_len(t.local(), @FSPath)+1) > len) return FALSE;
+    rstr_copy(t.stack(), path, t.local(), @FSPath);
     return TRUE;
 end
 
@@ -1360,9 +1212,9 @@ minixfs_read_zone(disk, position, dest) do
         t.farcopy(t.stack(), dest, t.local(), fsbuffer::4096, 1024);
         return TRUE;
     end
-!t.rwrites(T3X.SYSERR, t.local(), "[READ ");
+!term_kwrites("[READ ");
 !t.writenum(T3X.SYSERR, position);
-!t.rwrites(T3X.SYSERR, t.local(), "]");
+!term_kwrites("]");
     ! Read from disk
     if(\stream_seek(dtmp, position << 1, 0)) return FALSE;
     if(stream_read(dtmp, dest, 512) = 0) return FALSE;
@@ -1541,13 +1393,13 @@ minixfs_load_zone(fs, id, pos, dest) do
     ie(id = 0) id := 1; else id := id - 1;
     if(fs[FS_STATUS] \= STATUS_FS_MOUNTED) return FALSE;
     if(fs[MINIXFS_TOTAL_ITENS] < id) return FALSE;
-!t.rwrites(T3X.SYSERR, t.local(), "[LOAD ID ");
+!term_kwrites("[LOAD ID ");
 !t.writenum(T3X.SYSERR, id);
-!t.rwrites(T3X.SYSERR, t.local(), " POS ");
+!term_kwrites(" POS ");
 !t.writenum(T3X.SYSERR, pos);
-!t.rwrites(T3X.SYSERR, t.local(), " ZONE ");
+!term_kwrites(" ZONE ");
 !t.writenum(T3X.SYSERR, fs[MINIXFS_LIST_ITENS]);
-!t.rwrites(T3X.SYSERR, t.local(), "]");
+!term_kwrites("]");
     if
     (
         minixfs_read_zone
@@ -1933,6 +1785,7 @@ const TOTAL_PROCESS = 32;
 const STATUS_PROCESS_EMPTY = 0;
 const STATUS_PROCESS_RUNING = 1;
 const STATUS_PROCESS_WAINTING = 2;
+const STATUS_PROCESS_BACKEND = 3;
 
 struct OBJ_PROCESS =
 ! Process
@@ -2069,232 +1922,6 @@ process_init() do
     ProcessCurrent := ProcessKernel;
 end
 
-
-! ==========================================================================
-! Interrupt Handlers
-! ==========================================================================
-
-int_set(ptr_ant, int, funcao) do
-! Set new Interrupt Handler, store previous handler to restore
-    t.setptr(ptr_ant, t.fargetw(0, int*4+2), t.fargetw(0, int*4));
-    t.farsetw(0, int*4, funcao);
-    t.farsetw(0, int*4+2, t.local());
-end
-
-int_restore(ptr_ant, int) do
-! Restore stored interrupt handler
-    t.farsetw(0, int*4, t.getoff(ptr_ant));
-    t.farsetw(0, int*4+2, t.getseg(ptr_ant));
-end
-
-int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
-! Show calling args on screen
-    var stream[OBJ_STREAM], seg;
-    seg := t.local();
-    t.farcopy(t.stack(), stream, t.local(), t.fargetw(t.local(), @StreamErr), 
-        OBJ_STREAM <<1);
-    stream_rwrites(stream, seg, "[INT 0x");
-    stream_write_hex(stream, int);
-    stream_rwrites(stream, seg, " AX ");
-    stream_write_num(stream, ax);
-    stream_rwrites(stream, seg, " AH 0x");
-    stream_write_hex(stream, ax >> 8);
-    stream_rwrites(stream, seg, " BX ");
-    stream_write_num(stream, bx);
-    stream_rwrites(stream, seg, " CX ");
-    stream_write_num(stream, cx);
-    stream_rwrites(stream, seg, " DX ");
-    stream_write_num(stream, dx);
-    stream_rwrites(stream, seg, " DS ");
-    stream_write_num(stream, es);
-    stream_rwrites(stream, seg, " SI ");
-    stream_write_num(stream, si);
-    stream_rwrites(stream, seg, " ES ");
-    stream_write_num(stream, es);
-    stream_rwrites(stream, seg, " DI ");
-    stream_write_num(stream, di);
-    stream_rwrites(stream, seg, "]\r\n");
-    t.farcopy(t.local(), t.fargetw(t.local(), @StreamErr), t.stack(), stream,  
-        OBJ_STREAM <<1);
-end
-
-decl banner(1);
-decl shutdown(0);
-decl com_exec(2);
-
-int79exec(address, args)do
-    var stream[OBJ_STREAM];
-    if(\fs_open_file(address, stream)) return %1;
-    return com_exec(stream, args);
-end
-
-int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! HUSIS API (DS,ES,SS,SP from Application)
-    ie(ax = 0) ! Exit
-        t.int86ax(0x21, 0x4c00 | (bx & 0xff), bx, cx, dx, si, di);
-    else ie(ax = 1) ! Clear and print banner
-        banner(bx);
-    else ie(ax = 2) do ! Shutdown
-        t.setsegs(t.local(), 0xff00, 0xff00);
-        shutdown();
-    end
-    else ie(ax = 3) do ! Execute file
-        ax := int79exec(bx, cx);
-    end
-    else ie(ax = 4) do ! Get process id
-        ax := process_get_current();
-    end
-    else ie(ax = 5) do ! Get parent id
-        ax := process_get_parent(process_get_current());
-    end
-    else ie(ax = 6) do ! Get process info
-        ie(cx > TOTAL_PROCESS) 
-            ax := %2;
-        else ie(bx = 0)
-            ax := process_get_parent(cx);
-        else ie(bx = 1)
-            ax := process_get_seg(cx);
-        else ie(bx = 2)
-            ax := process_get_ip(cx);
-        else ie(bx = 3)
-            ax := process_get_sp(cx);
-        else ie(bx = 4)
-            ax := process_get_bp(cx);
-        else ie(bx = 5)
-            ax := process_get_status(cx);
-        else ax := %1;
-    end
-    else ie(ax = 10) do ! Write text on SYSOUT
-        t.writes(T3X.SYSOUT, bx);
-    end
-    else ie(ax = 11) do ! Write text on SYSERR
-        t.writes(T3X.SYSERR, bx);
-    end
-    else ie(ax = 12) do ! Write number on SYSOUT
-        t.writenum(T3X.SYSOUT, bx);
-    end
-    else ie(ax = 13) do ! Write number on SYSERR
-        t.writenum(T3X.SYSOUT, bx);
-    end
-    else ie(ax = 14) do ! Write line text on SYSOUT
-        t.writeln(T3X.SYSOUT, bx);
-    end
-    else ie(ax = 15) do ! Write line text on SYSERR
-        t.writeln(T3X.SYSERR, bx);
-    end
-    else ie(ax = 16) do ! Write fixed size text on SYSOUT
-        t.write(T3X.SYSOUT, bx, cx);
-    end
-    else ie(ax = 17) do ! Write fixed size text on SYSERR
-        t.write(T3X.SYSERR, bx, cx);
-    end
-    else ie(ax = 18) do ! Write char on SYSOUT
-        t.writec(T3X.SYSOUT, bx);
-    end
-    else ie(ax = 19) do ! Write char on SYSERR
-        t.writec(T3X.SYSERR, bx);
-    end
-    else ie(ax = 20) do ! Read line from SYSIN
-        t.read(T3X.SYSIN, bx, cx);
-    end
-    else ie(ax = 30) do ! Read free memory in KiB
-        ax := mem_calc_free_kib();
-    end
-    else ie(ax = 31) do ! Read free memory in Segments
-        ax := mem_calc_free();
-    end
-    else ie(ax = 40) do ! Open Dir [bx=Address, cx=Obj Dir Item]
-        ax := fs_open_dir(bx, cx);
-    end
-    else ie(ax = 41) do ! First item [bx=Obj Dir Item, cx=Obj Item]
-        ax := fs_first(bx[ITEM_FS], bx[ITEM_ID], cx);
-    end
-    else ie(ax = 42) do ! Next item [bx=Obj Item]
-        ax := fs_next(bx[ITEM_FS], bx);
-    end
-    else ie(ax = 43) do ! Open Item
-        ax := fs_open_item(bx, cx);
-    end
-    else ie(ax = 44) do ! Open File
-        ax := fs_open_file(bx, cx);
-    end
-    else ie(ax = 45) do ! Copy item [bx=Orig, cx=Dest]
-        t.memcopy(cx, bx, OBJ_ITEM << 1);
-        ax := TRUE;
-    end
-    else ie(ax = 50) do ! Read from Stream [bx=Stream, cx=Dest, dx=Len]
-        ax := stream_read(bx, cx, dx);
-    end
-    else ie(ax = 51) do ! Read from Stream [bx=Stream, cx=Orig, dx=Len]
-        ax := stream_write(bx, cx, dx);
-    end
-    else ie(ax = 52) do ! Read from Stream [bx=Stream]
-        ax := stream_close(bx);
-    end
-    else
-        int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-    return 0;
-end
-
-int20(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! DOS API (DS,ES,SS,SP from Application)
-    int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-end
-
-int21(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
-! DOS API (DS,ES,SS,SP from Application)
-    var func, al, preserve, tmp[OBJ_STREAM], tmp_ptr;
-    var proc_ip, proc_seg, proc_sp, proc_bp, proc_cs, proc, parent;
-    proc := process_get_current();
-    parent := process_get_parent(proc);
-    func := ax >> 8;
-    al := ax & 0xff;
-    ie(func = 0x40) do ! DOS WRITE
-        ie(bx = 1) do ! SYSOUT
-            tmp_ptr := t.fargetw(t.local(), @StreamOut);
-            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
-            ! Copy Kernel Stream object to Application memory
-            stream_write(tmp, dx, cx);
-            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
-        end
-        else ie(bx = 2) do ! SYSERR
-            tmp_ptr := t.fargetw(t.local(), @StreamErr);
-            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
-            ! Copy Kernel Stream object to Application memory
-            preserve := tmp[TERM_COLORS];
-            tmp[TERM_COLORS] := 4 << 8;
-            stream_write(tmp, dx, cx);
-            tmp[TERM_COLORS] := preserve;
-            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
-        end
-        else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-    end
-    else ie(func = 0x3f) do ! DOS READ
-        ie(bx = 0) do ! SYSIN
-            tmp_ptr := t.fargetw(t.local(), @StreamIn);
-            t.farcopy(t.stack(), tmp, t.local(), tmp_ptr, OBJ_STREAM<<1);
-            ! Copy Kernel Stream object to Application memory
-            stream_read(tmp, dx, cx);
-            t.farcopy(t.local(), tmp_ptr, t.stack(), tmp, OBJ_STREAM<<1);
-        end
-        else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-    end
-    else ie(func = 0x4c) do ! EXIT
-        process_set_status(proc, STATUS_PROCESS_EMPTY);
-        mem_free_process(proc);
-        process_set_current(parent);
-        proc_bp := process_get_bp(parent);
-        proc_cs := process_get_cs(parent);
-        proc_ip := process_get_ip(parent);
-        proc_sp := process_get_sp(parent);
-        proc_seg := process_get_seg(parent);
-        process_set_ret(parent, ax & 0xff);
-        t.bochsbrk();
-        t.jmpstack(proc_seg, proc_sp, proc_bp, proc_cs, proc_ip);
-    end
-    else int_debug(0x20, ax,bx,cx,dx,ds,si,es,di);
-end
-
 ! ==========================================================================
 ! COM File Support
 ! ==========================================================================
@@ -2302,7 +1929,6 @@ end
 com_exec(stream, args) do
 ! Load COM file to RAM and Execute
     var temp::128, seg, i, pos, block, process, args_size, exec, sp, bp, ip;
-! TODO: Implement multiple process
     process := new_process();
     seg := mem_alloc_seg(process);
     if(seg = 0) return %2;
@@ -2343,68 +1969,430 @@ com_exec(stream, args) do
 
 end
 
+! ==========================================================================
+! PRG File Support
+! ==========================================================================
+
+prg_exec(stream, args) do
+! Load PRG file to RAM and Execute
+    var temp::128, seg, i, pos, block, process, args_size, exec, sp, bp, ip, start_ip;
+    i := stream_read(stream, temp, 128);
+    if(t.farcomp(t.stack(), temp, t.local(), "HUSIS", 5)) return %3;
+    process := new_process();
+    start_ip := temp[4];
+    seg := mem_alloc(process, ((temp[5] + temp[6] + 2048) >> 4) + 10);
+    if(seg = 0) return %2;
+    ! Load PRG file
+    t.farcopy(seg, 2048, t.stack(), temp, i);
+    pos := 2048 + i;
+    block := 0;
+    while(i = 128) do
+        i := stream_read(stream, temp, 128);
+        t.farcopy(seg, pos, t.stack(), temp, i);
+        pos := pos + i;
+    end
+    t.farfill(seg, 0, 0, 2048);
+    args_size := str_len(args);
+    if(args_size > 120) args_size := 120;
+    t.farcopy(seg, 0, t.stack(), args, args_size);
+    t.farsetb(seg, args_size, 0);
+    exec := FALSE;
+    sp := t.stackptr();
+    bp := t.baseptr();
+    ip := t.instrptr();
+    ie(exec)do
+        ! Exit of PRG Program
+        return process_get_ret(process_get_current());
+    end
+    else do
+        ! Call PRG Program
+        process_set_segs(process_get_current(), t.stack(), sp, bp, 
+            t.local(), ip);
+        process_set_segs(process, seg, 2048, 2048, seg, start_ip);
+        process_set_parent(process, process_get_current());
+        process_set_current(process);
+        exec := TRUE;
+        t.jmpstack(seg, 2048, 2048, seg, start_ip);
+    end
+
+end
+
+! ==========================================================================
+! Interrupt Handlers
+! ==========================================================================
+
+var Int79Ant::T3X.PTRSIZE, IntMap::1024;
+
+int_set(ptr_ant, seg, int, funcao) do
+! Set new Interrupt Handler, store previous handler to restore
+    t.setptr(ptr_ant, t.fargetw(0, int*4+2), t.fargetw(0, int*4));
+    t.farsetw(0, int*4, funcao);
+    t.farsetw(0, int*4+2, seg);
+end
+
+int_restore(ptr_ant, int) do
+! Restore stored interrupt handler
+    t.farsetw(0, int*4, t.getoff(ptr_ant));
+    t.farsetw(0, int*4+2, t.getseg(ptr_ant));
+end
+
+int_debug(int,ax,bx,cx,dx,ds,si,es,di) do
+! Show calling args on screen
+    term_kwrites("[INT 0x");
+    term_writehex(int);
+    term_kwrites(" AX ");
+    term_writenum(ax);
+    term_kwrites(" AH 0x");
+    term_writehex(ax >> 8);
+    term_kwrites(" BX ");
+    term_writenum(bx);
+    term_kwrites(" CX ");
+    term_writenum(cx);
+    term_kwrites(" DX ");
+    term_writenum(dx);
+    term_kwrites(" DS ");
+    term_writenum(es);
+    term_kwrites(" SI ");
+    term_writenum(si);
+    term_kwrites(" ES ");
+    term_writenum(es);
+    term_kwrites(" DI ");
+    term_writenum(di);
+    term_kwrites("]\r\n");
+end
+
+int79com(address, args)do
+    var stream[OBJ_STREAM];
+    if(\fs_open_file(address, stream)) return %1;
+    return com_exec(stream, args);
+end
+
+int79prg(address, args)do
+    var stream[OBJ_STREAM];
+    if(\fs_open_file(address, stream)) return %1;
+    return prg_exec(stream, args);
+end
+
+int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
+    var proc, proc_bp, proc_cs, proc_ip, proc_sp, proc_seg, parent;
+    var color;
+    !
+    ! 0xx Kernel API
+    !
+    ie(ax < 100) do
+        ie(ax = 0) do ! Exit
+            proc := process_get_current();
+            parent := process_get_parent(proc);
+            process_set_status(proc, STATUS_PROCESS_EMPTY);
+            mem_free_process(proc);
+            process_set_current(parent);
+            proc_bp := process_get_bp(parent);
+            proc_cs := process_get_cs(parent);
+            proc_ip := process_get_ip(parent);
+            proc_sp := process_get_sp(parent);
+            proc_seg := process_get_seg(parent);
+            process_set_ret(parent, bx);
+            t.jmpstack(proc_seg, proc_sp, proc_bp, proc_cs, proc_ip);
+        end
+        else ie(ax = 1) do ! Shutdown
+            term_kwrites("\ec\ef03SYSTEM HALTED.");
+
+            ! Restore Interrupts
+            t.farcopy(0,0,t.local(), t.fargetw(t.local(), @IntMap), 1024);
+
+            if(Mode = MODE_STANDALONE) t.int86ax(0x18, 0,0,0,0 ,0,0); ! Reboot
+            if(Mode = MODE_DOS_APP)t.int86ax(0x21, 0x4d00,0,0,0, 0,0); ! exit to DOS
+        end
+        else ie(ax = 2) do ! Exit (Keep on memory)
+            proc := process_get_current();
+            parent := process_get_parent(proc);
+            process_set_status(proc, STATUS_PROCESS_BACKEND);
+            process_set_current(parent);
+            proc_bp := process_get_bp(parent);
+            proc_cs := process_get_cs(parent);
+            proc_ip := process_get_ip(parent);
+            proc_sp := process_get_sp(parent);
+            proc_seg := process_get_seg(parent);
+            process_set_ret(parent, 0);
+            t.jmpstack(proc_seg, proc_sp, proc_bp, proc_cs, proc_ip);
+        end
+        else ie(ax = 3) do ! Set new interrupt handler
+            int_set(bx, cx, dx, si);
+        end
+        else ie(ax = 4) do ! Restore interrupt handler
+            int_restore(bx, cx);
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    !
+    ! 1xx Terminal API
+    !
+    else ie(ax < 200) do
+        ie(ax = 100) do ! Write String on Screen(bx=string | cx=len)
+            term_write(bx, cx);
+        end
+        else ie(ax = 101) do ! Write String on Screen(bx=string)
+            term_writes(bx);
+        end
+        else ie(ax = 102) do ! Write String on Screen(bx=string)
+            term_writeln(bx);
+        end
+        else ie(ax = 103) do ! Write number on Screen(bx=string)
+            term_writenum(bx);
+        end
+        else ie(ax = 104) do ! Write hex on Screen(bx=string)
+            term_writehex(bx);
+        end
+        else ie(ax = 105) do ! New line
+            term_kwriteln("");
+        end
+        else ie(ax = 106) do ! Write char on Screen(bx=char)
+            term_write_char(bx);
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    !
+    ! 2xx Stream I/O API
+    !
+    else ie(ax < 300) do
+        ie(ax = 200) do ! New Stream
+            ! bx=Stream
+            ! ds=Seg
+            ! cx=Data Avail
+            ! dx=Seek
+            ! si=Read
+            ! di=Write
+            ax := new(bx,ds,cx,dx,0,si,0,di);
+        end
+        else ie(ax = 201) do ! Set extra pointers
+            ! bx=Stream
+            ! cx=Can Read
+            ! dx=Car Write
+            ! si=Close
+            bx[STREAM_PTR_CAN_READ] := cx;
+            bx[STREAM_PTR_CAN_WRITE] := dx;
+            bx[STREAM_PTR_CLOSE] := si;
+        end
+        else ie(ax = 202) do ! Set Buffer
+            ! bx=Stream
+            ! cx=Buffer Segment
+            ! dx=Buffer Pointer
+            ! si=Buffer Len
+            buffer_set(bx, cx,dx,si);
+        end
+        else ie(ax = 203) do ! Seek
+            ! bx=Stream
+            ! cx=Position Low
+            ! dx=Position High
+            ax := stream_seek(bx, cx,dx);
+        end
+        else ie(ax = 204) do ! Close
+            ! bx=Stream
+            ax := stream_close(bx);
+        end
+        else ie(ax = 205) do ! Read
+            ! bx=Stream
+            ! cx=Destination
+            ! dx=Len
+            ax := stream_read(bx, cx, dx);
+        end
+        else ie(ax = 206) do ! Write
+            ! bx=Stream
+            ! cx=Origin
+            ! dx=Len
+            ax := stream_write(bx, cx, dx);
+        end
+        else ie(ax = 207) do ! Write
+            ! bx=Stream
+            ! cx=Origin
+            ax := stream_writes(bx, cx);
+        end
+        else ie(ax = 208) do ! Write
+            ! bx=Stream
+            ! cx=Origin
+            ax := stream_writeln(bx, cx);
+        end
+        else ie(ax = 209) do ! Write
+            ! bx=Stream
+            ! cx=Segment
+            ! dx=Origin
+            ! si=Len
+            ax := stream_rwrite(bx, cx,dx,si);
+        end
+        else ie(ax = 210) do ! Write
+            ! bx=Stream
+            ! cx=Segment
+            ! dx=Origin
+            ax := stream_rwrites(bx, cx,dx);
+        end
+        else ie(ax = 211) do ! Write
+            ! bx=Stream
+            ! cx=Char
+            ax := stream_write_char(bx, cx);
+        end
+        else ie(ax = 212) do ! Write
+            ! bx=Stream
+            ! cx=Number
+            ax := stream_write_num(bx, cx);
+        end
+        else ie(ax = 213) do ! Write
+            ! bx=Stream
+            ! cx=Number
+            ax := stream_write_hex(bx, cx);
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    !
+    ! 3xx Process API
+    !
+    else ie(ax < 400) do
+        ie(ax = 300) do ! Execute COM File
+            ! bx = File name
+            ! cx = Arguments
+            ax := int79com(bx, cx);
+        end
+        else ie(ax = 301) do ! Execute PRG File
+            ! bx = File name
+            ! cx = Arguments
+            ax := int79prg(bx, cx);
+        end
+        else ie(ax = 302) do ! Get process ID
+            ax := process_get_current();
+        end
+        else ie(ax = 303) do ! Get status from process
+            ! bx = Process
+            ax := process_get_status(bx);
+        end
+        else ie(ax = 304) do ! Get segment from process
+            ! bx = Process
+            ax := process_get_seg(bx);
+        end
+        else ie(ax = 305) do ! Get ip from process
+            ! bx = Process
+            ax := process_get_ip(bx);
+        end
+        else ie(ax = 306) do ! Get sp from process
+            ! bx = Process
+            ax := process_get_sp(bx);
+        end
+        else ie(ax = 307) do ! Get bp from process
+            ! bx = Process
+            ax := process_get_bp(bx);
+        end
+        else ie(ax = 308) do ! Get parent from process
+            ! bx = Process
+            ax := process_get_parent(bx);
+        end
+        else ie(ax = 309) do ! Get process ID
+            ax := process_get_parent(process_get_current());
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    !
+    ! 4xx Memory Managment API
+    !
+    else ie(ax < 500) do
+        ie(ax = 400) do ! Get free memory in KiB
+            ax := mem_calc_free_kib();;
+        end
+        else ie(ax = 401) do ! Get free memory in Segments
+            ax := mem_calc_free();;
+        end
+        else ie(ax = 402) do ! Get size
+            ax := mem_size(bx);;
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    !
+    ! 5xx File System API
+    !
+    else ie(ax < 600) do
+        ie(ax = 500) do ! Register and mount file system
+            ! bx = Disk
+            ! ds = Segment
+            ! cx = First Item Function
+            ! dx = Next Item Function
+!            ax := fs_reg(bx, ds, cx,dx,si);
+!TODO: Adapt code to farget/farset
+            ax := FALSE;
+        end
+        else ie(ax = 501) do ! New item
+            ! bx = item
+            ! ds = Segment
+            ! cx = Type
+            ! dx = Open Function
+            ! si = Parent ID
+            ! di = ID
+            new_item(bx, cx, ds, dx, si, di);
+        end
+        else ie(ax = 502) do ! Open Item
+            ! bx = Item
+            ! cx = Stream
+            ax := fs_open_item(bx, cx);
+        end
+        else ie(ax = 503) do ! Open Dir
+            ! bx = Address
+            ! cx = Output Item
+            ax := fs_open_dir(bx, cx);
+        end
+        else ie(ax = 504) do ! Open File
+            ! bx = Address
+            ! cx = Output Item
+            ax := fs_open_file(bx, cx);
+        end
+        else ie(ax = 505) do ! First item
+            ! bx = Directory Item
+            ! cx = Item
+            ax := fs_first(bx[ITEM_FS], bx[ITEM_ID], cx);
+        end
+        else ie(ax = 506) do ! First item
+            ! bx = Item
+            ax := fs_next(bx[ITEM_FS], bx);
+        end
+        else ie(ax = 507) do ! Copy item 
+            ! bx = Orig
+            ! cx = Dest
+            t.memcopy(cx, bx, OBJ_ITEM << 1);
+            ax := TRUE;
+        end
+        else ie(ax = 508) do ! Change current directory
+            ! bx = Address
+            ax := fs_cd(bx);
+        end
+        else ie(ax = 509) do ! Get current directory
+            ! bx = Dest
+            ! cx = Len
+            ax := fs_pwd(bx, cx);
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
+    else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+end
+
 
 ! ==========================================================================
 ! Main
 ! ==========================================================================
 
-var Int79Ant[T3X.PTRSIZE], Int20Ant[T3X.PTRSIZE], Int21Ant[T3X.PTRSIZE];
-! Previous Interrupt Handlers
 
-banner(cls) do
-    t.rwrites(T3X.SYSOUT, t.local(), "\ef07\eb00");
-    ie(cls)
-        t.rwrites(T3X.SYSOUT, t.local(), "\ec");
-    else
-        t.rwrites(T3X.SYSOUT, t.local(), 
-            "\ex00\ey00\r80 \r80 \r80 \r80 \ey00\ex00");
-    t.rwrites(T3X.SYSOUT, t.local(), "\ef03HUSIS \ef04v");
-    t.writenum(T3X.SYSOUT, VERSION);
-    t.rwrites(T3X.SYSOUT, t.local(), ".");
-    t.writenum(T3X.SYSOUT, SUB_VERSION);
-    t.rwrites(T3X.SYSOUT, t.local(), " R");
-    t.writenum(T3X.SYSOUT, REVISION);
-    t.rwriteln(T3X.SYSOUT, t.local(), "\ef07");
-    if(Mode = MODE_DOS_APP) 
-        t.rwrites(T3X.SYSERR, t.local(), "[ DOS Application Mode] ");
-    t.rwriteln(T3X.SYSOUT, t.local(),"Build using \ef03T3X/86\ef07 Compiler");
-    t.rwriteln(T3X.SYSOUT, t.local(), 
-        "Copyright (c) 2022, Humberto Costa dos Santos Junior");
-    t.rwriteln(T3X.SYSOUT, t.local(), "License: 3-Clause BSD");
-    t.rwrites(T3X.SYSOUT, t.local(), "\eR80CD");
-end
+shutdown() t.int86ax(0x79, 1,0,0,0 ,0,0);
 
-shutdown() do
-! Shutdown HUSIS
-    t.writeln(T3X.SYSOUT, "\ec\ef03SYSTEM HALTED.");
-
-    ! Restore Interrupts
-    int_restore(Int79Ant, 0x79);
-    int_restore(Int20Ant, 0x20);
-    int_restore(Int21Ant, 0x21);
-
-    if(Mode = MODE_STANDALONE) t.int86ax(0x18, 0,0,0,0 ,0,0); ! Reboot
-    if(Mode = MODE_DOS_APP)t.int86ax(0x21, 0x4d00,0,0,0, 0,0); ! exit to DOS
-end
 
 fatal_error(msg) do
 ! Display fatal error and shutdown (My own 'blue screen of death' =) )
     var tmp::1;
-    t.rwrites(T3X.SYSERR, t.local(), "\ex00\ey24FATAL ERROR: ");
-    t.rwriteln(T3X.SYSERR, t.local(), msg);
-    t.rwrites(T3X.SYSERR, t.local(), "\r\nPress ENTER to shutdown.\r\n");
-    t.read(T3X.SYSIN, tmp, 0);
+    term_kwrites("\ex00\ey24FATAL ERROR: ");
+    term_kwrites(msg);
+    term_kwrites("\r\nPress ANY KEY to shutdown.\r\n");
+    term_read_char();
     shutdown();
 end
 
+
 do
-! Main routine, initialize operating system
     var arg::64, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
-    var disk, i, item[OBJ_ITEM], stream[OBJ_STREAM];
-    ! Replace INT 20(DOS API), 21(DOS API) and INT 79(HUSIS API)
-    int_set(Int79Ant, 0x79, @int79);
-    int_set(Int21Ant, 0x20, @int20);
-    int_set(Int21Ant, 0x21, @int21);
+    var disk, i, item[OBJ_ITEM], stream[OBJ_STREAM], file_name::128;
+    var buffer::256, exec_stream[OBJ_STREAM];
 
     ! Verify current ambient
     ie(t.fargetw(t.local(), 0x10) = 1989)
@@ -2412,6 +2400,9 @@ do
     else
         Mode := MODE_DOS_APP;
 
+    ! Preserve interrupt map
+    t.farcopy(t.local(), IntMap, 0, 0, 1024);
+    
     ! Initialize
     mem_init();
     term_init();
@@ -2419,10 +2410,10 @@ do
     fs_init();
     minixfs_init();
     process_init();
-
-    ! HUSIS Banner using DOS API implemented by HUSIS
-    banner(TRUE);
-
+    
+    ! Initialize Kernel API
+    int_set(Int79Ant, t.local(), 0x79, @int79);
+    
     ! Parse arguments: DISK CILINDERS HEADS SECTORS
     arg_ok := TRUE;
     if(t.getarg(1, arg, 15) = 0) arg_ok := FALSE;
@@ -2438,28 +2429,47 @@ do
     if(arg_sect = 0) arg_ok := FALSE;
     
     ie(arg_ok) do
-        t.writes(T3X.SYSOUT, "Mounting Disk ");
-        t.writenum(T3X.SYSOUT, arg_disk);
-        t.writes(T3X.SYSOUT, " [C:");
-        t.writenum(T3X.SYSOUT, arg_cil);
-        t.writes(T3X.SYSOUT, " H:");
-        t.writenum(T3X.SYSOUT, arg_head);
-        t.writes(T3X.SYSOUT, " S:");
-        t.writenum(T3X.SYSOUT, arg_sect);
-        t.writes(T3X.SYSOUT, "]");
+        term_kwrites("Mounting Disk ");
+        term_writenum(arg_disk);
+        term_kwrites(" [C:");
+        term_writenum(arg_cil);
+        term_kwrites(" H:");
+        term_writenum(arg_head);
+        term_kwrites(" S:");
+        term_writenum(arg_sect);
+        term_kwrites("]");
         ! Create disk
         disk := disk_reg(arg_disk, arg_cil, arg_head, arg_sect);
-        t.writes(T3X.SYSOUT, " .");
+        term_kwrites(" .");
         ! Mount disk using MinixFS
         if(\minixfs_mount(disk)) fatal_error("Disk corrupted.");
-        t.writeln(T3X.SYSOUT, " [ OK ]");
+        term_kwriteln(" [ OK ]");
         if(t.getarg(5, arg, 64) = 0) 
             fatal_error(
             "Shell missing. Use: DISK_ID CILINDERS HEADS SECTORS SHELL_PATH");
-        t.writes(T3X.SYSOUT, "Loading ");
-        t.writeln(T3X.SYSOUT, arg);
-        if(\fs_open_file(arg, stream)) fatal_error("Shell file not found.");
-        com_exec(stream, "/System/Autoexec.hsh");
+        term_kwrites("Loading ");
+        term_kwriteln(arg);
+        if(\fs_open_file(arg, stream)) fatal_error("Autoexec file not found.");
+        stream_buffer_init(buffer, 256);
+        while(stream_readln(stream, buffer, file_name, 127)) do
+            if(str_len(file_name) > 0) do
+                term_kwrites("Loading ");
+                term_writes(file_name);
+                if(\fs_open_file(file_name, exec_stream)) do 
+                    term_writes(file_name);
+                    term_kwriteln(" file not found");
+                end
+                ie(str_endswith(file_name, ".com")) do 
+                    term_kwriteln(" . [ COM File ]");
+                    com_exec(exec_stream, "");
+                end
+                else ie(str_endswith(file_name, ".prg")) do 
+                    term_kwriteln(" . [ PRG File ]");
+                    prg_exec(exec_stream, "");
+                end
+                else term_kwriteln(". [ FILE NOT SUPPORTED ]");
+            end
+        end
     end
     else do
         fatal_error(
@@ -2470,4 +2480,3 @@ do
     ! Shutdown system
     shutdown();
 end
-
