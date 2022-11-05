@@ -4,44 +4,42 @@ all:
 	@echo -= Build Complete =-
 
 img:
-	mkdir -p TMP
-	dd if=/dev/zero of=1440.IMG bs=1024 count=1440
-	mkfs.minix 1440.IMG -1 -n30
-	dd if=BOOT/BOOT1440.SYS of=1440.IMG bs=1024 count=1 conv=notrunc
-	sudo mount -t minix 1440.IMG TMP/
+	rm *.IMG
+	dd if=/dev/zero of=IMG.IMG bs=1024 count=1440
+	minixfs mkfs IMG.IMG -1 -n 30 -s 1440
+	dd if=BOOT/BOOT1440.SYS of=IMG.IMG bs=1024 count=1 conv=notrunc
 	make img_copy
-	sudo umount TMP
-	dd if=/dev/zero of=360.IMG bs=1024 count=360
-	mkfs.minix 360.IMG -1 -n30
-	dd if=BOOT/BOOT360.SYS of=360.IMG bs=1024 count=1 conv=notrunc
-	sudo mount -t minix 360.IMG TMP/
+	mv IMG.IMG 1440.IMG
+	dd if=/dev/zero of=IMG.IMG bs=1024 count=360
+	minixfs mkfs IMG.IMG -1 -n 30 -s 360
+	dd if=BOOT/BOOT360.SYS of=IMG.IMG bs=1024 count=1 conv=notrunc
 	make img_copy
-	sudo umount TMP
+	mv IMG.IMG 360.IMG
 
 img_copy:
-	sudo cp HUSIS.COM TMP/husis
-	sudo mkdir TMP/Programs
-	sudo mkdir TMP/Documents
-	sudo mkdir TMP/Library
-	sudo mkdir TMP/Config
-	sudo mkdir TMP/System
-	sudo cp AUTOEXEC.HSH TMP/System/Autoexec.hsh
-	sudo cp PROGS/HELLO1.PRG TMP/Programs/Hello1.prg
-	sudo cp PROGS/HELLO2.COM TMP/Programs/Hello2.com
-	sudo cp PROGS/HELLO3.COM TMP/Programs/Hello3.com
-	sudo cp SYSTEM/SHELL.COM TMP/System/Shell.com
-	sudo cp SYSTEM/DOSAPI.PRG TMP/System/DOSAPI.prg
-	sudo cp SYSTEM/CGA.PRG TMP/System/CGA.prg
-	sudo cp SYSTEM/EGA.PRG TMP/System/EGA.prg
-	sudo cp SYSTEM/SPLASH.TXT TMP/System/Splash.txt
-	sudo cp SYSTEM/BOLD.FON TMP/System/Bold.fon
-	sudo cp SYSTEM/BOLD.FON TMP/System/Default.fon
-	sudo cp SYSTEM/DRAW.FON TMP/System/Draw.fon
-	sudo cp BIN/T.COM TMP/Programs/T.com
-	sudo cp BIN/S86.COM TMP/Programs/S86.com
-	sudo cp BIN/OSASMCOM.COM TMP/Programs/OSAsmCOM.com
-	sudo cp BIN/OSASMSYS.COM TMP/Programs/OSAsmSYS.com
-	sudo cp BIN/OSASMPRG.COM TMP/Programs/OSAsmPRG.com
+	minixfs add IMG.IMG HUSIS.COM /husis
+	minixfs mkdir IMG.IMG /Programs
+	minixfs mkdir IMG.IMG /Documents
+	minixfs mkdir IMG.IMG /Library
+	minixfs mkdir IMG.IMG /Config
+	minixfs mkdir IMG.IMG /System
+	minixfs add IMG.IMG AUTOEXEC.HSH /System/Autoexec.hsh
+	minixfs add IMG.IMG PROGS/HELLO1.PRG /Programs/Hello1.prg
+	minixfs add IMG.IMG PROGS/HELLO2.COM /Programs/Hello2.com
+	minixfs add IMG.IMG PROGS/HELLO3.COM /Programs/Hello3.com
+	minixfs add IMG.IMG SYSTEM/SHELL.COM /System/Shell.com
+	minixfs add IMG.IMG SYSTEM/DOSAPI.PRG /System/DOSAPI.prg
+	minixfs add IMG.IMG SYSTEM/CGA.PRG /System/CGA.prg
+	minixfs add IMG.IMG SYSTEM/EGA.PRG /System/EGA.prg
+	minixfs add IMG.IMG SYSTEM/SPLASH.TXT /System/Splash.txt
+	minixfs add IMG.IMG SYSTEM/BOLD.FON /System/Bold.fon
+	minixfs add IMG.IMG SYSTEM/BOLD.FON /System/Default.fon
+	minixfs add IMG.IMG SYSTEM/DRAW.FON /System/Draw.fon
+	minixfs add IMG.IMG BIN/T.COM /Programs/T.com
+	minixfs add IMG.IMG BIN/S86.COM /Programs/S86.com
+	minixfs add IMG.IMG BIN/OSASMCOM.COM /Programs/OSAsmCOM.com
+	minixfs add IMG.IMG BIN/OSASMSYS.COM /Programs/OSAsmSYS.com
+	minixfs add IMG.IMG BIN/OSASMPRG.COM /Programs/OSAsmPRG.com
 
 test: all img
 	dosbox -C "BOOT 1440.IMG -l A"
