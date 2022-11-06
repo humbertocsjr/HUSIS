@@ -1,9 +1,6 @@
 echo -= DOS API =- >> ..\MAKE.LOG
 ..\bin\OSASMPRG DOSAPI >> ..\MAKE.LOG
 
-echo -= CGA Video Controller =- >> ..\MAKE.LOG
-..\bin\OSASMPRG CGA >> ..\MAKE.LOG
-
 echo -= EGA Video Controller =- >> ..\MAKE.LOG
 ..\bin\OSASMPRG EGA >> ..\MAKE.LOG
 

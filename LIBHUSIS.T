@@ -23,6 +23,57 @@
 const TRUE = %1;
 const FALSE = 0;
 
+
+! ==========================================================================
+! Font API
+! ==========================================================================
+
+font_load_base(file_name, font) 
+    return t.int86ax(0x81, 200,file_name,font,0, 0,0);
+font_load_extended(file_name, font, start) 
+    return t.int86ax(0x81, 201,file_name,font,start, 0,0);
+font_apply_base(font) 
+    t.int86ax(0x81, 202,font,0,0, 0,0);
+font_apply_extended(font) 
+    t.int86ax(0x81, 203,font,0,0, 0,0);
+font_get_extended_start() 
+    return t.int86ax(0x81, 204,0,0,0, 0,0);
+
+! ==========================================================================
+! Base Font - Special Characteres
+! ==========================================================================
+
+const FONT_FRAME_UP_LEFT = 1;
+const FONT_FRAME_UP = 2;
+const FONT_FRAME_UP_RIGHT = 3;
+const FONT_FRAME_LEFT = 4;
+const FONT_FRAME_DOWN = 5;
+const FONT_FRAME_RIGHT = 6;
+const FONT_FRAME_DOWN_LEFT = 7;
+const FONT_FRAME_DOWN_RIGHT = 8;
+const FONT_WINDOW = 9;
+const FONT_MINIMIZE = 10;
+const FONT_CLOSE = 11;
+const FONT_UP = 12;
+const FONT_DOWN = 13;
+const FONT_FRAME_DOWN_RIGHT_RESIZABLE = 14;
+const FONT_FRAME_UP_DOWN = 15;
+const FONT_FRAME_LEFT_RIGHT = 16;
+const FONT_BOX_PLUS = 17;
+const FONT_BOX_MINUS = 18;
+const FONT_BOX = 19;
+const FONT_BOX_CHECKED = 20;
+const FONT_GRAY = 21;
+const FONT_MENU = 22;
+const FONT_HORIZONTAL_LINES = 23;
+const FONT_ARROW_LEFT = 24;
+const FONT_ARROW_RIGHT = 25;
+const FONT_ARROW_UP = 26;
+const FONT_ARROW_DOWN = 27;
+const FONT_MOUSE_CURSOR = 29;
+const FONT_CIRCLE = 30;
+const FONT_SEARCH = 31;
+
 ! ==========================================================================
 ! Memory Management
 ! ==========================================================================
@@ -93,16 +144,16 @@ io_readln(dest, len) return t.int86ax(0x81, 114,dest,len,0, 0,0);
 ! User Interface API
 ! ==========================================================================
 
-ui_new(control, type) t.int86ax(0x81, 200,control,type,0, 0,0);
-ui_render(control) t.int86ax(0x81, 201,control,0,0, 0,0);
-ui_destroy(control) t.int86ax(0x81, 202,control,0,0, 0,0);
-ui_attach(control, parent) t.int86ax(0x81, 203,control,0,0, 0,0);
-ui_attach_window(control) t.int86ax(0x81, 204,control,0,0, 0,0);
-ui_show(control) t.int86ax(0x81, 205,control,0,0, 0,0);
-ui_hide(control) t.int86ax(0x81, 205,control,0,0, 0,0);
+ui_new(control, type) t.int86ax(0x81, 300,control,type,0, 0,0);
+ui_render(control) t.int86ax(0x81, 301,control,0,0, 0,0);
+ui_destroy(control) t.int86ax(0x81, 302,control,0,0, 0,0);
+ui_attach(control, parent) t.int86ax(0x81, 303,control,0,0, 0,0);
+ui_attach_window(control) t.int86ax(0x81, 304,control,0,0, 0,0);
+ui_show(control) t.int86ax(0x81, 305,control,0,0, 0,0);
+ui_hide(control) t.int86ax(0x81, 306,control,0,0, 0,0);
 
 ui_new_type(type,ptr_render,ptr_focus,ptr_key,ptr_mouse)
-    t.int86ax(0x81, 300,type,ptr_render,ptr_focus, ptr_key,ptr_mouse);
+    t.int86ax(0x81, 307,type,ptr_render,ptr_focus, ptr_key,ptr_mouse);
 
 ! ==========================================================================
 ! File
@@ -167,6 +218,8 @@ path_set(path) return t.int86ax(0x79, 508,path,0,0, 0,0);
 const STATUS_UNKNOWN = 0;
 const STATUS_OPEN = 1;
 const STATUS_CLOSE = 2;
+
+const BUFFER_SIZE = 1030;
 
 struct OBJ_RET =
 ! Return Object

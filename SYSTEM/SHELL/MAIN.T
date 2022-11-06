@@ -419,6 +419,76 @@ term_init() do
 end
 
 ! ==========================================================================
+! Font Manipulation
+! ==========================================================================
+
+
+var Font8x8::4096;
+
+load_font(font_file, font_dest, start)do
+    var buffer::BUFFER_SIZE, tmp::128, stream[OBJ_STREAM], type, stage,
+        i, x, y, ptr, value, count;
+    ie(open_file(font_file, stream)) do
+        stream_buffer_init(buffer, BUFFER_SIZE);
+        stage := 0;
+        type := 0;
+        count := 0;
+        while(stream_readln(stream, buffer, tmp, 256)) do
+            ie(str_equal(tmp, "END")) do
+                leave;
+            end
+            else ie(stage = 0) do ! Detect type
+                ie(str_equal(tmp, "FONTBASE")) do
+                    stage := 1;
+                    type := 1;
+                end
+                else ie(str_equal(tmp, "FONTUTF8")) do
+                    stage := 1;
+                    type := 2;
+                end
+                else ie(str_equal(tmp, "FONTCUSTOM")) do
+                    stage := 1;
+                    type := 3;
+                end
+                else return 0;
+            end
+            else ie(stage = 1) do ! Read width
+                x := str_to_num(tmp);
+                stage := 2;
+                if(x \= 8) return 0;
+            end
+            else ie(stage = 2) do ! Read height
+                y := str_to_num(tmp);
+                stage := 3;
+                if((y < 6) | (y > 32)) return 0;
+            end
+            else ie(type = 1) do ! Read FONTBASE
+                ie(stage = 3) do ! Read Position
+                    ptr := str_to_hex(tmp) * y + start;
+                    if(ptr > 4096) return 0;
+                    stage := 4;
+                    i := 0;
+                end
+                else ie(stage = 4) do ! Read Character line
+                    value := str_to_binary(tmp);
+                    font_dest::ptr := value;
+                    ptr := ptr + 1;
+                    i := i + 1;
+                    if(i = y) stage := 3;
+                end
+                else return 0;
+            end
+            else return 0;
+        end
+        stream_close(stream);
+        return ptr + 1;
+    end
+    else do
+        return 0;
+    end
+end
+
+! ==========================================================================
 ! Shell/User Interface API
 ! ==========================================================================
 
@@ -520,6 +590,27 @@ int81(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         end
         else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
     end
+    !
+    ! Font API
+    !
+    else ie(ax < 300) do
+        ie (ax = 200) do ! Load base font to local array (LEN 4096)
+            ax = load_font(bx, cx, 0);
+        end
+        else ie (ax = 201) do ! Load extended font to local array (LEN 4096)
+            ax = load_font(bx, cx, dx);
+        end
+        else ie (ax = 202) do ! Implement local base font
+            t.farcopy(t.local(), @Font8x8, t.stack(), bx, 2048);
+        end
+        else ie (ax = 203) do ! Implement local extended font
+            t.farcopy(t.local(), @Font8x8 + 2048, t.stack(), bx, 2048);
+        end
+        else ie (ax = 204) do ! Get extended font start pointer
+            ax = 2048;
+        end
+        else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
+    end
     else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
 end
 
@@ -528,73 +619,6 @@ end
 ! Main
 ! ==========================================================================
 
-var Font8x8::4096;
-
-load_font(font_file)do
-    var buffer::1030, tmp::128, stream[OBJ_STREAM], type, stage,
-        i, x, y, ptr, ret, value, count;
-    ie(open_file(font_file, stream)) do
-        stream_buffer_init(buffer, 1030);
-        stage := 0;
-        type := 0;
-        ret := 0;
-        count := 0;
-        while(stream_readln(stream, buffer, tmp, 256)) do
-            ie(str_equal(tmp, "END")) do
-                leave;
-            end
-            else ie(stage = 0) do ! Detect type
-                ie(str_equal(tmp, "FONTBASE")) do
-                    stage := 1;
-                    type := 1;
-                    ret := 0xffff;
-                end
-                else ie(str_equal(tmp, "FONTUTF8")) do
-                    stage := 1;
-                    type := 2;
-                end
-                else ie(str_equal(tmp, "FONTCUSTOM")) do
-                    stage := 1;
-                    type := 3;
-                end
-                else return 0;
-            end
-            else ie(stage = 1) do ! Read width
-                x := str_to_num(tmp);
-                stage := 2;
-                if(x \= 8) return 0;
-            end
-            else ie(stage = 2) do ! Read height
-                y := str_to_num(tmp);
-                stage := 3;
-                if((y < 6) | (y > 32)) return 0;
-            end
-            else ie(type = 1) do ! Read FONTBASE
-                ie(stage = 3) do ! Read Position
-                    count := count + 1;
-                    ptr := str_to_hex(tmp) * y;
-                    if(ptr > 4096) return 0;
-                    stage := 4;
-                    i := 0;
-                end
-                else ie(stage = 4) do ! Read Character line
-                    value := str_to_binary(tmp);
-                    Font8x8::ptr := value;
-                    ptr := ptr + 1;
-                    i := i + 1;
-                    if(i = y) stage := 3;
-                end
-                else return 0;
-            end
-            else return 0;
-        end
-        stream_close(stream);
-        return ret;
-    end
-    else do
-        return 0;
-    end
-end
 
 splash_screen() do
     var buffer::512, tmp::256, stream[OBJ_STREAM];
@@ -640,7 +664,7 @@ do
     husis_int_set(Int81Old, 0x81, @int81);
     splash_screen();
     progress(10, "Loading Fonts");
-    if(load_font("/System/Default.fon"))
+    if(load_font("/System/Default.fon", Font8x8, 0))
         video_set_font8x8(Font8x8);
     progress(20, "Loading User Interface");
     i := 0;

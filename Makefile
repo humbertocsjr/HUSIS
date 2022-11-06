@@ -29,7 +29,6 @@ img_copy:
 	minixfs add IMG.IMG PROGS/HELLO3.COM /Programs/Hello3.com
 	minixfs add IMG.IMG SYSTEM/SHELL.COM /System/Shell.com
 	minixfs add IMG.IMG SYSTEM/DOSAPI.PRG /System/DOSAPI.prg
-	minixfs add IMG.IMG SYSTEM/CGA.PRG /System/CGA.prg
 	minixfs add IMG.IMG SYSTEM/EGA.PRG /System/EGA.prg
 	minixfs add IMG.IMG SYSTEM/SPLASH.TXT /System/Splash.txt
 	minixfs add IMG.IMG SYSTEM/BOLD.FON /System/Bold.fon
