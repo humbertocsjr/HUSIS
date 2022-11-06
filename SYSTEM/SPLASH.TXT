@@ -10,7 +10,8 @@
              |  |  |  |  |  |  |  |  |_____   |  |  |  |_____   |
              |  |  |  |  |  |__|  |   _____|  |  |  |   _____|  |
              |__|  |__|  |________|  |________|  |__|  |________|
-
+             \ef07Copyright (c) 2022, Humberto Costa dos Santos Junior
+             Sistema Operacional Brasileiro
 \ef07
 
-REMOVE THIS LINE TO SHOW SPLASH\ecHUSIS ALPHA
+REMOVE THIS LINE TO SHOW SPLASH\\ecHUSIS ALPHA

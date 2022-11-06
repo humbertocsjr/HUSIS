@@ -185,9 +185,10 @@ video_can_show_colors: | __ega6
 
 video_set_font8x8: | __ega7
     push bp
-    mov ax, #0x1100
+    mov ax, #0x1110
     mov bp, bx
     mov cx, #256
+    xor dx, dx
     movb bl, #0
     movb bh, #8
     int #0x10

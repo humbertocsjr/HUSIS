@@ -376,15 +376,15 @@ str_to_hex2(str, num) do
     ret := num;
     c := str::0;
     ie(char_is_num(c)) do
-        ret := (ret * 10) + (c - '0');
+        ret := (ret << 4) + (c - '0');
         ret := str_to_hex2(@str::1, ret);
     end
     else ie((c >= 'a') &(c <= 'f')) do
-        ret := (ret * 10) + (c - 'a' + 10);
+        ret := (ret << 4) + (c - 'a' + 10);
         ret := str_to_hex2(@str::1, ret);
     end
     else if((c >= 'A') &(c <= 'F')) do
-        ret := (ret * 10) + (c - 'A' + 10);
+        ret := (ret << 4) + (c - 'A' + 10);
         ret := str_to_hex2(@str::1, ret);
     end
     return ret;
@@ -402,7 +402,7 @@ str_to_binary2(str, num) do
         ret := (ret << 1);
         ret := str_to_binary2(@str::1, ret);
     end
-    else if(c = 1) do
+    else if(c = '1') do
         ret := (ret << 1) + 1;
         ret := str_to_binary2(@str::1, ret);
     end

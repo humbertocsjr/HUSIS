@@ -202,8 +202,33 @@ term_write_char(c) do
         t.farsetw(t.local(), @TermUtf8Pos, 0);
         if(utf_pos = 1)do
             if(utf_0 = 0xc3) do
-                ie(c = 0x87) c := 0x6a;
-                else ie(c = 0xa7) c := 0x6a;
+                ie((c = 0x81) | (c = 0xa1)) c := 0x61;
+                else ie((c = 0x80) | (c = 0xa0)) c := 0x62;
+                else ie((c = 0x82) | (c = 0xa2)) c := 0x63;
+                else ie((c = 0x85) | (c = 0xa5)) c := 0x64;
+                else ie((c = 0x83) | (c = 0xa3)) c := 0x65;
+                else ie((c = 0x84) | (c = 0xa4)) c := 0x66;
+                else ie((c = 0x89) | (c = 0xa9)) c := 0x67;
+                else ie((c = 0x88) | (c = 0xa8)) c := 0x68;
+                else ie((c = 0x9c) | (c = 0xbc)) c := 0x69;
+                else ie((c = 0x8a) | (c = 0xaa)) c := 0x6a;
+                else ie((c = 0x87) | (c = 0xa7)) c := 0x6b;
+                else ie((c = 0x91) | (c = 0xb1)) c := 0x6c;
+                else ie((c = 0x86) | (c = 0xa6)) c := 0x6d;
+                else ie((c = 0x8d) | (c = 0xad)) c := 0x6e;
+                else ie((c = 0x8c) | (c = 0xac)) c := 0x6f;
+                else ie((c = 0x8f) | (c = 0xaf)) c := 0x70;
+                else ie((c = 0x8e) | (c = 0xae)) c := 0x71;
+                else ie((c = 0x93) | (c = 0xb3)) c := 0x72;
+                else ie((c = 0x92) | (c = 0xb2)) c := 0x73;
+                else ie((c = 0x94) | (c = 0xb4)) c := 0x74;
+                else ie((c = 0x96) | (c = 0xb6)) c := 0x75;
+                else ie((c = 0x95) | (c = 0xb5)) c := 0x76;
+                else ie((c = 0x98) | (c = 0xb8)) c := 0x77;
+                else ie((c = 0x9a) | (c = 0xba)) c := 0x78;
+                else ie((c = 0x99) | (c = 0xb9)) c := 0x79;
+                else ie((c = 0x9f) | (c = 0xbf)) c := 0x7f;
+                else ie((c = 0x81) | (c = 0xa1)) c := 0x1d;
                 else c := '?';
             end
         end 
@@ -506,13 +531,14 @@ end
 var Font8x8::4096;
 
 load_font(font_file)do
-    var buffer::512, tmp::256, stream[OBJ_STREAM], type, stage,
-        i, x, y, ptr, ret, value;
+    var buffer::1030, tmp::128, stream[OBJ_STREAM], type, stage,
+        i, x, y, ptr, ret, value, count;
     ie(open_file(font_file, stream)) do
-        stream_buffer_init(buffer, 512);
+        stream_buffer_init(buffer, 1030);
         stage := 0;
         type := 0;
         ret := 0;
+        count := 0;
         while(stream_readln(stream, buffer, tmp, 256)) do
             ie(str_equal(tmp, "END")) do
                 leave;
@@ -521,6 +547,7 @@ load_font(font_file)do
                 ie(str_equal(tmp, "FONTBASE")) do
                     stage := 1;
                     type := 1;
+                    ret := 0xffff;
                 end
                 else ie(str_equal(tmp, "FONTUTF8")) do
                     stage := 1;
@@ -544,6 +571,7 @@ load_font(font_file)do
             end
             else ie(type = 1) do ! Read FONTBASE
                 ie(stage = 3) do ! Read Position
+                    count := count + 1;
                     ptr := str_to_hex(tmp) * y;
                     if(ptr > 4096) return 0;
                     stage := 4;
@@ -552,6 +580,7 @@ load_font(font_file)do
                 else ie(stage = 4) do ! Read Character line
                     value := str_to_binary(tmp);
                     Font8x8::ptr := value;
+                    ptr := ptr + 1;
                     i := i + 1;
                     if(i = y) stage := 3;
                 end
@@ -591,11 +620,11 @@ progress(perc, text) do
     str_from_num_fixed(txt, 2, perc >> 1);
     term_writes("\ef03\eR");
     term_writes(txt);
-    term_writes("FE");
+    term_writes("1E");
     str_from_num_fixed(txt, 2, 50 - (perc >> 1));
     term_writes("\ef07\eR");
     term_writes(txt);
-    term_writes("FE");
+    term_writes("1E");
     term_writes("\n\ex15");
     str_from_num_fixed(txt, 2, (50 - str_len(text)) / 2);
     term_writes("\eb00\ef07\er");
@@ -611,8 +640,8 @@ do
     husis_int_set(Int81Old, 0x81, @int81);
     splash_screen();
     progress(10, "Loading Fonts");
-    load_font("/System/Default.fon");
-    video_set_font8x8(Font8x8);
+    if(load_font("/System/Default.fon"))
+        video_set_font8x8(Font8x8);
     progress(20, "Loading User Interface");
     i := 0;
     while(TRUE) do
