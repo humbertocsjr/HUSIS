@@ -1,3 +1,7 @@
+| HUSIS Library
+| Humberto Costa dos Santos Junior, 2022
+| License: 0BSD or Public Domain
+
 jmp libh86_end
 
 

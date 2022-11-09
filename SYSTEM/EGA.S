@@ -10,9 +10,9 @@
 name:
     .asciz "EGA Video Controller"
 version:
-    .word 0
-sub_version:
     .word 1
+sub_version:
+    .word 0
 revision:
     .word 0
 copyright_year:
@@ -191,6 +191,11 @@ video_set_font8x8: | __ega7
     xor dx, dx
     movb bl, #0
     movb bh, #8
+    int #0x10
+    mov ax, #0x100
+    xor bx,bx
+    mov cx, #0x2020
+    xor dx, dx
     int #0x10
     pop bp
     mov ax, #TRUE

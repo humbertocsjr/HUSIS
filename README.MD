@@ -1,6 +1,21 @@
 # HUSIS - Operating System for IBM PC and Compatibles
 
+HUSIS is a text-based operating system for 8086/8088 CPUs, with custom EGA/VGA fonts to create an interactive and dynamic interface.
+
 This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
+
+## Current Roadmap Topics
+
+- Full customizable font
+- Library Manager
+- User Interface Controls
+    - Window
+    - Label
+    - ListBox
+    - TextBox
+    - TextArea
+- File Manager Implementation
+- Test Multitask performance impact in User Interface API
 
 ## Changes in current release
 
@@ -18,9 +33,9 @@ This implements a static screen terminal without scroll function, my inspiration
 
 IBM PC or Compatible
 
-Floppy Disk
+360 KiB Floppy Disk
 
-CGA/EGA/VGA Video Card (MDA Partial Support, in implementation)
+EGA/VGA Video Card (MDA/CGA Video Card/Monitor is not suported)
 
 256 KiB RAM (Standalone) or 384 KiB RAM (DOS App mode)
 
@@ -41,22 +56,24 @@ Run 'HUSIS.COM'
 ## Build Requirements
 
 - DOS(FreeDOS/MS-DOS/DOSBOX)
+- MinixFS Tool 
 
 ## Embedded Build Tools
 
 - [T3X/86](https://github.com/humbertocsjr/T3X86LL)
 - [Old-School Assembler](https://github.com/humbertocsjr/osasm)
+- [MinixFS Tool](https://github.com/humbertocsjr/minixfs)
 
 ## Build on DOS
 
 Use MAKE.BAT command to build
 
-## Build on Linux
+## Build on Linux / MacOS
 
 Use 'make' command to build.
 
 
-Use 'make img' to generate standalone floppy image (Use SUDO to mount image)
+Use 'make img' to generate standalone floppy image 
 
 
 Use 'make test' to generate standalone floppy image and run on DOSBOX(Standalone Mode)
@@ -83,12 +100,27 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 - [x] Minix File System - Read
 - [ ] Minix File System - Write
 - [x] Load and Execute Application from File
-- [ ] Capture return and exit application
+- [x] Capture return and exit application
 - [x] COM Executable Support (ORG 0x100 ARGS 0x81 STACK 0xffff SIZE 64 KiB)
-- [ ] PRG Executable Support (ORG 0x800 ARGS 0x0 STACK 0x800 SIZE Dinamic)
+- [x] PRG Executable Support (ORG 0x800 ARGS 0x0 STACK 0x800 SIZE Dinamic)
 - [ ] Serial I/O using Stream
 - [ ] Parallel Port I/O using Stream
 - [ ] Multitask for background drivers
+
+### Video Support
+
+- [x] Initialize 80x43 text video mode (Requires EGA/VGA or compatible)
+- [x] Set custom 8x8 font
+- [x] Base Font Support
+- [ ] Custom Extended Font Support
+- [ ] UTF-8 Extended Font Support
+
+### Fonts
+
+- [x] Default Bold Base Font
+- [ ] Slim Base Font
+- [x] Draw Extended Font
+- [x] File Manager Extended Font
 
 ### DOS API
 
@@ -116,6 +148,7 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 ### Drivers
 
+- [x] EGA Video Controller
 - [ ] FAT12/16 File System Driver
 - [ ] NE2000 Packet Driver
 - [ ] IPX Protocol Stack
@@ -123,7 +156,8 @@ Use 'make testdos' run on DOSBOX(DOS Mode)
 
 ### Applications
 
-- [x] Command Prompt
+- [ ] File Manager
+- [ ] Command Prompt
 - [ ] Text Editor
 - [ ] BASIC Interpreter
 - [ ] Custom T3X/86 with PRG Support (Minimal RAM usage, fixed 2 KiB Stack)

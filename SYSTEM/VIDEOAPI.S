@@ -11,7 +11,7 @@
 .word  0            | 06w    : Size of Data Extended Area
 
 | Import LIBH86
-.include ../LIBH86.S
+.include ../LIB/LIBH86.S
 
 
 int82: | __videoapi0

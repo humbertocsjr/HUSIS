@@ -1,3 +1,22 @@
+
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+! IMPORT HUSIS/BASE.T
 ! HUSIS - Modular Kernel
 ! Humberto Costa dos Santos Junior, 2022
 ! 3-Clause BSD license
@@ -9,8 +28,8 @@
 !  This is a reorganization and simplification of original HUSIS Kernel, to 
 !  keep kernel under 40 KiB.
 
-const VERSION = 0;
-const SUB_VERSION = 5;
+const VERSION = 2022;
+const SUB_VERSION = 11;
 const REVISION = 0;
 
 const TRUE = %1;
@@ -29,6 +48,24 @@ const MODE_DOS_APP = 2;  ! Running as DOS App
 ! In this mode HUSIS Kernel will preserve all DOS Structures on RAM and use
 ! DOS delimited RAM space by MCB (DOS Memory Control Block).
 
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+! IMPORT HUSIS/STRINGS.T
 
 ! ==========================================================================
 ! String/Character
@@ -138,6 +175,25 @@ end
 
 rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! Convert remote string to number
+
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+! IMPORT HUSIS/IO.T
 
 
 ! ==========================================================================
@@ -395,7 +451,24 @@ stream_readln(stream, buffer, dest, dest_len) do
     end
     return TRUE;
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/TERM.T
 ! ==========================================================================
 ! Terminal I/O
 ! ==========================================================================
@@ -488,7 +561,24 @@ end
 term_init() do
 end
 
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/MEM.T
 ! ==========================================================================
 ! Memory Manager
 ! ==========================================================================
@@ -640,6 +730,24 @@ mem_calc_free_kib() do
     return (mem_calc_free() >> 6) & 0x7fff;
 end
 
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+! IMPORT HUSIS/DISK.T
 ! ==========================================================================
 ! BIOS Disk I/O using Stream API
 ! ==========================================================================
@@ -664,22 +772,25 @@ end
 _disk_read(stream, seg, dest, len, ret) far do
 ! Read block from disk using BIOS Disk API
     var ax, bx, cx, dx, i;
-    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
+    var cil, head, sect, cil_tot, head_tot, sect_tot, position;
     ret[RET_OK] := FALSE;
     ret[RET_VALUE] := 0;
     if(len \= 512) return;
-    posicao := stream[DISK_POS_LOW];
+    position := stream[DISK_POS_LOW];
     cil_tot := stream[DISK_CILINDERS];
     head_tot := stream[DISK_HEADS];
     sect_tot := stream[DISK_SECTORS];
-    cil := posicao / (head_tot * sect_tot);
-    head := (posicao / sect_tot) mod head_tot;
-    sect := (posicao mod sect_tot) + 1;
+    cil := position / (head_tot * sect_tot);
+    head := (position / sect_tot) mod head_tot;
+    sect := (position mod sect_tot) + 1;
     if(cil >= cil_tot) return;
     ax := 0x201;
     bx := dest;
     cx := (cil << 8) | sect | ((cil >> 8) << 6);
     dx := stream[DISK_BIOS_ID] | (head << 8);
+!term_kwrites("[R");
+!term_writenum(position);
+!term_kwrites("]");
     for(i=0,3) do
         ! Try 3 times (Physical Floppy disk controller needed this)
         ret[RET_OK] := TRUE;
@@ -696,17 +807,17 @@ end
 _disk_write(stream, seg, orig, len, ret) far do
 ! Write block from disk using BIOS Disk API
     var ax, bx, cx, dx, i;
-    var cil, head, sect, cil_tot, head_tot, sect_tot, posicao;
+    var cil, head, sect, cil_tot, head_tot, sect_tot, position;
     ret[RET_OK] := FALSE;
     ret[RET_VALUE] := 0;
     if(len \= 512) return;
-    posicao := stream[DISK_POS_LOW];
+    position := stream[DISK_POS_LOW];
     cil_tot := stream[DISK_CILINDERS];
     head_tot := stream[DISK_HEADS];
     sect_tot := stream[DISK_SECTORS];
-    cil := posicao / (head_tot * sect_tot);
-    head := (posicao / sect_tot) mod head_tot;
-    sect := (posicao mod sect_tot) + 1;
+    cil := position / (head_tot * sect_tot);
+    head := (position / sect_tot) mod head_tot;
+    sect := (position mod sect_tot) + 1;
     if(cil >= cil_tot) return;
     ax := 0x301;
     bx := orig;
@@ -770,7 +881,24 @@ disk_reg(id, cil, head, sect) do
     end
     return %1;
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/FS.T
 ! ==========================================================================
 ! File System Infrastructure
 ! ==========================================================================
@@ -1110,7 +1238,24 @@ fs_pwd(path, len)do
     rstr_copy(t.stack(), path, t.local(), @FSPath);
     return TRUE;
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/MINIXFS.T
 ! ==========================================================================
 ! Minix File System
 ! ==========================================================================
@@ -1130,90 +1275,124 @@ const STREAM_MINIXFS_POS = STREAM_AUX2;
 const STREAM_MINIXFS_ID = STREAM_AUX3;
 const STREAM_MINIXFS_FS = STREAM_AUX4;
 
+const MINIXFS_BUFFER_CAPACITY = 5;
+
 var MinixFSBuffer::5120, 
-! 4 Buffers regions most used
-    MinixFSBuffer0, 
-    MinixFSBuffer1, 
-    MinixFSBuffer2,
-    MinixFSBuffer3,
-    MinixFSBuffer4, 
-    MinixFSBufferFS0, 
-    MinixFSBufferFS1, 
-    MinixFSBufferFS2,
-    MinixFSBufferFS3,
-    MinixFSBufferFS4;
+    MinixFSBufferPos[MINIXFS_BUFFER_CAPACITY],
+    MinixFSBufferDisk[MINIXFS_BUFFER_CAPACITY],
+    MinixFSBufferUsage[MINIXFS_BUFFER_CAPACITY];
+
+minixfs_buffer_read(disk, position, dest) do
+    var i, fsbuffer, pos_list, disk_list, usage_list;
+    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
+    pos_list := t.fargetw(t.local(), @MinixFSBufferPos);
+    disk_list := t.fargetw(t.local(), @MinixFSBufferDisk);
+    usage_list := t.fargetw(t.local(), @MinixFSBufferUsage);
+    for(i = 0, MINIXFS_BUFFER_CAPACITY) do
+        t.farsetw
+        (
+            t.local(), 
+            usage_list + (i<<1),
+            t.fargetw(t.local(), usage_list + (i<<1)) + 1
+        );
+    end
+    for(i = 0, MINIXFS_BUFFER_CAPACITY) do
+        if
+        (
+            (t.fargetw(t.local(), pos_list + (i<<1)) = position) &
+            (t.fargetw(t.local(), disk_list + (i<<1)) = disk)
+        )
+        do
+            t.farsetw
+            (
+                t.local(), 
+                usage_list + (i<<1),
+                1
+            );
+            t.farcopy(t.stack(), dest, t.local(), fsbuffer + (i * 1024), 1024);
+!term_kwrites("[RFOUND");
+!term_writenum(i);
+!term_kwrites("]");
+            return TRUE;
+        end
+    end
+    return FALSE;
+end
+
+minixfs_buffer_write(disk, position, orig) do
+    var i, fsbuffer, pos_list, disk_list, usage_list, old_usage, old_index;
+    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
+    pos_list := t.fargetw(t.local(), @MinixFSBufferPos);
+    disk_list := t.fargetw(t.local(), @MinixFSBufferDisk);
+    usage_list := t.fargetw(t.local(), @MinixFSBufferUsage);
+    old_usage := 0;
+    old_index := 0;
+    for(i = 0, MINIXFS_BUFFER_CAPACITY) do
+        t.farsetw
+        (
+            t.local(), 
+            usage_list + (i<<1),
+            t.fargetw(t.local(), usage_list + (i<<1)) + 1
+        );
+        if(t.fargetw(t.local(), usage_list + (i<<1)) > old_usage) do
+            old_index := i;
+            old_usage := t.fargetw(t.local(), usage_list + (i<<1));
+        end
+    end
+    for(i = 0, MINIXFS_BUFFER_CAPACITY) do
+        if
+        (
+            (t.fargetw(t.local(), pos_list + (i<<1)) = position) &
+            (t.fargetw(t.local(), disk_list + (i<<1)) = disk)
+        )
+        do
+            t.farsetw
+            (
+                t.local(), 
+                usage_list + (i<<1),
+                1
+            );
+            t.farcopy(t.local(), fsbuffer + (i * 1024), t.stack(), orig, 1024);
+!term_kwrites("[WFOUND");
+!term_writenum(old_index);
+!term_kwrites("]");
+            return TRUE;
+        end
+    end
+    t.farsetw
+    (
+        t.local(), 
+        usage_list + (old_index<<1),
+        1
+    );
+    t.farsetw
+    (
+        t.local(), 
+        pos_list + (old_index<<1),
+        position
+    );
+    t.farsetw
+    (
+        t.local(), 
+        disk_list + (old_index<<1),
+        disk
+    );
+    t.farcopy(t.local(), fsbuffer + (old_index * 1024), t.stack(), orig, 1024);
+!term_kwrites("[WNEW");
+!term_writenum(old_index);
+!term_kwrites("]");
+end
 
 minixfs_read_zone(disk, position, dest) do
 ! Read zones (1024 bytes disk block) using 512 bytes physical blocks
-    var fsbuffer, fsbuffer0, fsbuffer1, fsbuffer2, fsbuffer3, fsbuffer4;
-    var fsbufferfs0, fsbufferfs1, fsbufferfs2, fsbufferfs3, fsbufferfs4;
     var dtmp[OBJ_STREAM], dptr;
-    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
-    fsbuffer0 := t.fargetw(t.local(), @MinixFSBuffer0);
-    fsbuffer1 := t.fargetw(t.local(), @MinixFSBuffer1);
-    fsbuffer2 := t.fargetw(t.local(), @MinixFSBuffer2);
-    fsbuffer3 := t.fargetw(t.local(), @MinixFSBuffer3);
-    fsbuffer4 := t.fargetw(t.local(), @MinixFSBuffer4);
-    fsbufferfs0 := t.fargetw(t.local(), @MinixFSBufferFS0);
-    fsbufferfs1 := t.fargetw(t.local(), @MinixFSBufferFS1);
-    fsbufferfs2 := t.fargetw(t.local(), @MinixFSBufferFS2);
-    fsbufferfs3 := t.fargetw(t.local(), @MinixFSBufferFS3);
-    fsbufferfs4 := t.fargetw(t.local(), @MinixFSBufferFS4);
     dptr := t.fargetw(t.local(), @DiskList);
     t.farcopy(t.stack(), dtmp, t.local(), 
         t.fargetw(t.local(), dptr + (disk << 1)), OBJ_STREAM<<1);
     ! Check buffer, if buffered, return copy
-    ie
-    (
-        (position > 0) &
-        (position < 8) & 
-        (fsbuffer0 = position) &
-        (fsbufferfs0 = disk)
-    ) do
-        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::0, 1024);
-        return TRUE;
-    end
-    else ie
-    (
-        (position >= 8) & 
-        (position < 16) & 
-        (fsbuffer1 = position) &
-        (fsbufferfs1 = disk)
-    ) do
-        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::1024, 1024);
-        return TRUE;
-    end
-    else ie
-    (
-        (position >= 16) & 
-        (position < 64) & 
-        (fsbuffer2 = position) &
-        (fsbufferfs2 = disk)
-    ) do
-        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::2048, 1024);
-        return TRUE;
-    end
-    else ie
-    (
-        (position >= 64) & 
-        (position < 1024) & 
-        (fsbuffer3 = position) &
-        (fsbufferfs3 = disk)
-    ) do
-        t.farcopy(t.stack(), dest, t.local(), @fsbuffer::3072, 1024);
-        return TRUE;
-    end
-    else if
-    (
-        (position >= 1024) &
-        (fsbuffer4 = position) &
-        (fsbufferfs4 = disk)
-    ) do
-        t.farcopy(t.stack(), dest, t.local(), fsbuffer::4096, 1024);
-        return TRUE;
-    end
+    if(minixfs_buffer_read(disk, position, dest)) return TRUE;
 !term_kwrites("[READ ");
-!t.writenum(T3X.SYSERR, position);
+!term_writenum(position);
 !term_kwrites("]");
     ! Read from disk
     if(\stream_seek(dtmp, position << 1, 0)) return FALSE;
@@ -1221,69 +1400,13 @@ minixfs_read_zone(disk, position, dest) do
     if(\stream_seek(dtmp, (position << 1) + 1, 0)) return FALSE;
     if(stream_read(dtmp, @dest::512, 512) = 0) return FALSE;
     ! Store on buffer
-    ie
-    (
-        (position > 0) &
-        (position < 8)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::0, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @fsbuffer0, position);
-        t.farsetw(t.local(), @fsbufferfs0, disk);
-    end
-    else ie
-    (
-        (position >= 8) & 
-        (position < 16)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::1024, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @fsbuffer1, position);
-        t.farsetw(t.local(), @fsbufferfs1, disk);
-    end
-    else ie
-    (
-        (position >= 16) & 
-        (position < 64)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::2048, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @fsbuffer2, position);
-        t.farsetw(t.local(), @fsbufferfs2, disk);
-    end
-    else ie
-    (
-        (position >= 64) & 
-        (position < 1024)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::3072, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @fsbuffer3, position);
-        t.farsetw(t.local(), @fsbufferfs3, disk);
-    end
-    else if
-    (
-        (position >= 1024)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::4096, t.stack(), dest, 1024);
-        t.farsetw(t.local(),   @fsbuffer4, position);
-        t.farsetw(t.local(), @fsbufferfs4, disk);
-    end
+    minixfs_buffer_write(disk, position, dest);
     return TRUE;
 end
 
 minixfs_write_zone(disk, position, orig) do
 ! Write zones (1024 bytes disk block) using 512 bytes physical blocks
-    var fsbuffer, fsbuffer0, fsbuffer1, fsbuffer2, fsbuffer3, fsbuffer4;
-    var fsbufferfs0, fsbufferfs1, fsbufferfs2, fsbufferfs3, fsbufferfs4;
     var dtmp[OBJ_STREAM], dptr;
-    fsbuffer := t.fargetw(t.local(), @MinixFSBuffer);
-    fsbuffer0 := t.fargetw(t.local(), @MinixFSBuffer0);
-    fsbuffer1 := t.fargetw(t.local(), @MinixFSBuffer1);
-    fsbuffer2 := t.fargetw(t.local(), @MinixFSBuffer2);
-    fsbuffer3 := t.fargetw(t.local(), @MinixFSBuffer3);
-    fsbuffer4 := t.fargetw(t.local(), @MinixFSBuffer4);
-    fsbufferfs0 := t.fargetw(t.local(), @MinixFSBufferFS0);
-    fsbufferfs1 := t.fargetw(t.local(), @MinixFSBufferFS1);
-    fsbufferfs2 := t.fargetw(t.local(), @MinixFSBufferFS2);
-    fsbufferfs3 := t.fargetw(t.local(), @MinixFSBufferFS3);
-    fsbufferfs4 := t.fargetw(t.local(), @MinixFSBufferFS4);
     dptr := t.fargetw(t.local(), @DiskList);
     t.farcopy(t.stack(), dtmp, t.local(), 
         t.fargetw(t.local(), dptr + (disk << 1)), OBJ_STREAM<<1);
@@ -1296,50 +1419,7 @@ minixfs_write_zone(disk, position, orig) do
     if(\stream_seek(dtmp, (position << 1) + 1, 0)) return FALSE;
     if(stream_write(dtmp, @orig::512, 512) = 0) return FALSE;
     ! Store on buffer
-    ie
-    (
-        (position > 0) &
-        (position < 8)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::0, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @fsbuffer0, position);
-        t.farsetw(t.local(), @fsbufferfs0, disk);
-    end
-    else ie
-    (
-        (position >= 8) & 
-        (position < 16)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::1024, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @fsbuffer1, position);
-        t.farsetw(t.local(), @fsbufferfs1, disk);
-    end
-    else ie
-    (
-        (position >= 16) & 
-        (position < 64)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::2048, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @fsbuffer2, position);
-        t.farsetw(t.local(), @fsbufferfs2, disk);
-    end
-    else ie
-    (
-        (position >= 64) & 
-        (position < 1024)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::3072, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @fsbuffer3, position);
-        t.farsetw(t.local(), @fsbufferfs3, disk);
-    end
-    else if
-    (
-        (position >= 1024)
-    ) do
-        t.farcopy(t.local(), @fsbuffer::4096, t.stack(), orig, 1024);
-        t.farsetw(t.local(),   @fsbuffer4, position);
-        t.farsetw(t.local(), @fsbufferfs4, disk);
-    end
+    minixfs_buffer_write(disk, position, orig);
     return TRUE;
 end
 
@@ -1770,12 +1850,31 @@ end
 
 minixfs_init() do
 ! Initialize buffer
-    MinixFSBuffer0 := 0;
-    MinixFSBuffer1 := 0;
-    MinixFSBuffer2 := 0;
-    MinixFSBuffer3 := 0;
+    var i;
+    for(i = 0, MINIXFS_BUFFER_CAPACITY) do
+        MinixFSBufferDisk[i] := %1;
+        MinixFSBufferPos[i] := 0;
+        MinixFSBufferUsage[i] := 2000;
+    end
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/PROCESS.T
 ! ==========================================================================
 ! Process Management
 ! ==========================================================================
@@ -1921,7 +2020,24 @@ process_init() do
         t.local(), 256);
     ProcessCurrent := ProcessKernel;
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/EXEC.T
 ! ==========================================================================
 ! COM File Support
 ! ==========================================================================
@@ -2016,7 +2132,24 @@ prg_exec(stream, args) do
     end
 
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/INT79.T
 ! ==========================================================================
 ! Interrupt Handlers
 ! ==========================================================================
@@ -2121,6 +2254,15 @@ int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         end
         else ie(ax = 4) do ! Restore interrupt handler
             int_restore(bx, cx);
+        end
+        else ie(ax = 5) do ! Version
+            ax := VERSION;
+        end
+        else ie(ax = 6) do ! Sub-Version
+            ax := SUB_VERSION;
+        end
+        else ie(ax = 7) do ! Revision
+            ax := REVISION;
         end
         else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
     end
@@ -2368,7 +2510,24 @@ int79(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
     end
     else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
 end
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
 
+! IMPORT HUSIS/MAIN.T
 
 ! ==========================================================================
 ! Main
@@ -2392,7 +2551,7 @@ end
 do
     var arg::64, arg_disk, arg_cil, arg_head, arg_sect, arg_ok;
     var disk, i, item[OBJ_ITEM], stream[OBJ_STREAM], file_name::128;
-    var buffer::256, exec_stream[OBJ_STREAM];
+    var buffer::1030, exec_stream[OBJ_STREAM];
 
     ! Verify current ambient
     ie(t.fargetw(t.local(), 0x10) = 1989)
@@ -2450,7 +2609,7 @@ do
         term_kwrites("Loading ");
         term_kwriteln(arg);
         if(\fs_open_file(arg, stream)) fatal_error("Autoexec file not found.");
-        stream_buffer_init(buffer, 256);
+        stream_buffer_init(buffer, 1030);
         while(stream_readln(stream, buffer, file_name, 127)) do
             if(str_len(file_name) > 0) do
                 term_kwrites("Loading ");

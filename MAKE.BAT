@@ -10,5 +10,6 @@ cd SYSTEM
 call make.bat
 cd ..
 echo -= HUSIS Kernel =- >> MAKE.LOG
+bin\prj husis.prj husis.t
 bin\t husis >> MAKE.LOG
 exit
