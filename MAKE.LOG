@@ -31,10 +31,10 @@ Old-School Assembler para HUSIS v1.17 [PT-BR]
  Incluindo arquivo VIDEOAPI.S
  Incluindo arquivo ../LIB/LIBH86.S
 -= Shell =-
-Text = 25490, Data = 10930, Symbols = 418, Nlist = 5605, Labels = 765
+Text = 27202, Data = 10930, Symbols = 432, Nlist = 5819, Labels = 799
 -= File Manager =-
-Text = 7813, Data = 4718, Symbols = 291, Nlist = 3753, Labels = 226
+Text = 7857, Data = 4718, Symbols = 295, Nlist = 3814, Labels = 228
 -= Application Manager =-
-Text = 5729, Data = 786, Symbols = 193, Nlist = 2578, Labels = 140
+Text = 7480, Data = 1030, Symbols = 230, Nlist = 3142, Labels = 200
 -= HUSIS Kernel =-
 Text = 31202, Data = 9474, Symbols = 330, Nlist = 4165, Labels = 692

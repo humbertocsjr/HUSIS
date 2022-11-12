@@ -5,7 +5,7 @@
 var ThemeControl, ThemeText, ThemeWindowBorder, ThemeWindowTitleBack,
     ThemeWindowTitleText, ThemeScreenBack, ThemeScreenText, 
     ThemeWindowClose, ThemeWindowMaximize, ThemeWindowMinimize,
-    ThemeWindowButtonDisable;
+    ThemeWindowButtonDisable, ThemeEditorBack, ThemeEditorText;
 
 const WINDOW_CAPACITY = 32;
 

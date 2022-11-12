@@ -16,7 +16,7 @@
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBBASE.T
+!#IMPORT ..\LIB\LIBBASE.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -46,7 +46,7 @@ struct COLORS = BLACK, DARK_BLUE, DARK_GREEN, DARK_CYAN, DARK_RED,
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBHUSIS.T
+!#IMPORT ..\LIB\LIBHUSIS.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -114,7 +114,7 @@ husis_int_restore(old_seg_ptr, int)
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBFONT.T
+!#IMPORT ..\LIB\LIBFONT.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -190,7 +190,7 @@ const FONT_SEARCH = 31;
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBVIDEO.T
+!#IMPORT ..\LIB\LIBVIDEO.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -237,7 +237,7 @@ video_write_char_color(char)
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBSTR.T
+!#IMPORT ..\LIB\LIBSTR.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -476,7 +476,7 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBIO.T
+!#IMPORT ..\LIB\LIBIO.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -720,7 +720,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBUI.T
+!#IMPORT ..\LIB\LIBUI.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -785,7 +785,11 @@ struct OBJ_CONTROL =
     CONTROL_CALC_Y,
     CONTROL_CALC_WIDTH,
     CONTROL_CALC_HEIGHT;
-    
+
+const TEXTBOX_CURSOR_X = CONTROL_VALUE_1;
+const TEXTBOX_POSITION = CONTROL_VALUE_2;
+const TEXTBOX_LEN = CONTROL_VALUE_3;
+
 struct OBJ_UITYPE = 
     UITYPE_SEG,
     UITYPE_RENDER_PTR,
@@ -795,6 +799,7 @@ struct OBJ_UITYPE =
 
 uitype_window(uitype) t.int86ax(0x81, 400,uitype,0,0, 0,0);
 uitype_label(uitype) t.int86ax(0x81, 401,uitype,0,0, 0,0);
+uitype_textbox(uitype) t.int86ax(0x81, 402,uitype,0,0, 0,0);
 
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
@@ -813,7 +818,7 @@ uitype_label(uitype) t.int86ax(0x81, 401,uitype,0,0, 0,0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\BASE.T
+!#IMPORT SHELL\BASE.T
 ! Text Shell for HUSIS
 ! Humberto Costa dos Santos Junior, 2022
 ! 3-Clause BSD license
@@ -840,7 +845,7 @@ const REVISION = 0;
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\TERM.T
+!#IMPORT SHELL\TERM.T
 ! ==========================================================================
 ! Terminal I/O
 ! ==========================================================================
@@ -881,6 +886,60 @@ term_calc_pos(x, y) do
     t.farsetw(t.local(), @TermY, y);
     !video_goto(x, y);
     t.farsetw(t.local(), @TermPtr, (y * 80 + x) << 1);
+end
+
+term_change_color(x, y, foreground, background) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    t.farsetb(
+            t.fargetw(t.local(), @TermSeg), 
+            ((y * 80 + x) << 1) + 1, 
+            (background << 4) | (foreground));
+end
+
+term_change_char(x, y, c) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    t.farsetb(
+            t.fargetw(t.local(), @TermSeg), 
+            ((y * 80 + x) << 1), 
+            c);
+end
+
+term_get_char(x, y) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    return t.fargetb(
+                    t.fargetw(t.local(), @TermSeg), 
+                    ((y * 80 + x) << 1)
+                    );
 end
 
 term_get_height() return t.fargetw(t.local(), @TermHeight);
@@ -1281,7 +1340,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\FONT.T
+!#IMPORT SHELL\FONT.T
 ! ==========================================================================
 ! Font Manipulation
 ! ==========================================================================
@@ -1368,7 +1427,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\UI.T
+!#IMPORT SHELL\UI.T
 ! ==========================================================================
 ! User Interface
 ! ==========================================================================
@@ -1376,7 +1435,7 @@ end
 var ThemeControl, ThemeText, ThemeWindowBorder, ThemeWindowTitleBack,
     ThemeWindowTitleText, ThemeScreenBack, ThemeScreenText, 
     ThemeWindowClose, ThemeWindowMaximize, ThemeWindowMinimize,
-    ThemeWindowButtonDisable;
+    ThemeWindowButtonDisable, ThemeEditorBack, ThemeEditorText;
 
 const WINDOW_CAPACITY = 32;
 
@@ -1619,7 +1678,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\CONTROLS\WINDOW.T
+!#IMPORT SHELL\CONTROLS\WINDOW.T
 ! ==========================================================================
 ! Window UIType
 ! ==========================================================================
@@ -1633,13 +1692,21 @@ window_render(control) far do
 
     term_write_char('\e');
     term_write_char('r');
-    str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH]);
+    str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH] - 1);
     term_writes(tmp);
     term_write_char(FONT_HORIZONTAL_LINES);
+    term_write_char_force(FONT_FRAME_LEFT);
 
-    term_calc_pos(control[CONTROL_CALC_X] + 4, control[CONTROL_CALC_Y]);
-    if(control[CONTROL_CONTENT_PTR] \= 0)
-        term_write(control[CONTROL_CONTENT_PTR], (str_len(control[CONTROL_CONTENT_PTR]) + 5) >= control[CONTROL_WIDTH] ->  (control[CONTROL_WIDTH] - 5) : str_len(control[CONTROL_CONTENT_PTR]));
+    if(control[CONTROL_CONTENT_PTR] \= 0) do
+        ie((str_len(control[CONTROL_CONTENT_PTR]) + 6) >= control[CONTROL_CALC_WIDTH]) do
+            term_calc_pos(control[CONTROL_CALC_X] + 5, control[CONTROL_CALC_Y]);
+            term_write(control[CONTROL_CONTENT_PTR], (control[CONTROL_CALC_WIDTH] - 6));
+        end
+        else do
+            term_calc_pos(control[CONTROL_CALC_X] + ((control[CONTROL_CALC_WIDTH] - str_len(control[CONTROL_CONTENT_PTR])) >> 1), control[CONTROL_CALC_Y]);
+            term_write(control[CONTROL_CONTENT_PTR], str_len(control[CONTROL_CONTENT_PTR]));
+        end
+    end
 
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]);
     term_color_fore(t.fargetw(t.local(), @ThemeWindowClose));
@@ -1654,6 +1721,9 @@ window_render(control) far do
     else
         term_color_fore(t.fargetw(t.local(), @ThemeWindowButtonDisable));
     term_write_char_force(FONT_MAXIMIZE);
+
+    term_color_fore(t.fargetw(t.local(), @ThemeWindowTitleText));
+    term_write_char_force(FONT_FRAME_RIGHT);
 
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]+1);
 
@@ -1730,7 +1800,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\CONTROLS\LABEL.T
+!#IMPORT SHELL\CONTROLS\LABEL.T
 ! ==========================================================================
 ! Label UIType
 ! ==========================================================================
@@ -1738,6 +1808,8 @@ end
 label_render(control) far do
     var tmp::20;
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]);
+    term_color_fore(t.fargetw(t.local(), @ThemeText));
+    term_color_back(t.fargetw(t.local(), @ThemeControl));
     ie(control[CONTROL_CONTENT_PTR] = 0) do
         term_write_char('\e');
         term_write_char('r');
@@ -1798,7 +1870,79 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\INT81.T
+!#IMPORT SHELL\CONTROLS\TEXTBOX.T
+! ==========================================================================
+! TextBox UIType
+! ==========================================================================
+
+textbox_render(control) far do
+    var tmp::20;
+    term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]);
+    term_color_fore(t.fargetw(t.local(), @ThemeEditorText));
+    term_color_back(t.fargetw(t.local(), @ThemeEditorBack));
+    ie(control[CONTROL_CONTENT_PTR] = 0) do
+        term_write_char('\e');
+        term_write_char('r');
+        str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH]);
+        term_writes(tmp);
+        term_write_char(' ');
+    end
+    else do
+        ie(str_len(control[CONTROL_CONTENT_PTR]) < control[CONTROL_CALC_WIDTH]) do
+            term_writes(control[CONTROL_CONTENT_PTR]);
+            term_write_char('\e');
+            term_write_char('r');
+            str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH] - str_len(control[CONTROL_CONTENT_PTR]));
+            term_writes(tmp);
+            term_write_char(' ');
+        end
+        else do
+            term_write(control[CONTROL_CONTENT_PTR], control[CONTROL_CALC_WIDTH]);
+        end
+    end
+    if(control[TEXTBOX_CURSOR_X] >= control[CONTROL_CALC_WIDTH]) control[TEXTBOX_CURSOR_X] := control[CONTROL_CALC_WIDTH];
+    term_change_color(control[CONTROL_CALC_X] + control[TEXTBOX_CURSOR_X], control[CONTROL_CALC_Y], t.fargetw(t.local(), @ThemeEditorText), t.fargetw(t.local(), @ThemeEditorBack));
+end
+
+textbox_focus(control, focus) far do
+end
+
+textbox_keyboard(control, press, ascii, scancode) far do
+end
+
+textbox_mouse(control, primary_click, secondary_click, scroll) far do
+end
+
+textbox_new(uitype) do
+    interface_new_uitype
+    (
+        uitype, 
+        t.local(), 
+        @textbox_render,
+        @textbox_focus,
+        @textbox_keyboard,
+        @textbox_mouse
+    );
+end
+
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+!#IMPORT SHELL\INT81.T
 ! ==========================================================================
 ! Shell/User Interface API
 ! ==========================================================================
@@ -1965,6 +2109,9 @@ int81(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         else ie (ax = 401) do ! New Label Type
             label_new(bx);
         end
+        else ie (ax = 402) do ! New TextBox Type
+            textbox_new(bx);
+        end
         else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
     end
     else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
@@ -1986,7 +2133,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT SHELL\MAIN.T
+!#IMPORT SHELL\MAIN.T
 ! ==========================================================================
 ! Main
 ! ==========================================================================
@@ -2053,13 +2200,15 @@ do
     ThemeText := BLACK;
     ThemeWindowBorder := BLACK;
     ThemeWindowTitleBack := BLACK;
-    ThemeWindowTitleText := WHITE;
+    ThemeWindowTitleText := LIGHT_GRAY;
     ThemeScreenBack := DARK_CYAN;
     ThemeScreenText := BLACK;
     ThemeWindowClose := LIGHT_RED;
     ThemeWindowMinimize := LIGHT_YELLOW;
     ThemeWindowMaximize := LIGHT_GREEN;
     ThemeWindowButtonDisable := LIGHT_GRAY;
+    ThemeEditorBack := WHITE;
+    ThemeEditorText := BLACK;
     ! Initialize Terminal
     term_init();
     term_cls();

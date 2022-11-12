@@ -16,7 +16,7 @@
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBBASE.T
+!#IMPORT ..\LIB\LIBBASE.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -46,7 +46,7 @@ struct COLORS = BLACK, DARK_BLUE, DARK_GREEN, DARK_CYAN, DARK_RED,
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBSTR.T
+!#IMPORT ..\LIB\LIBSTR.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -285,7 +285,7 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBIO.T
+!#IMPORT ..\LIB\LIBIO.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -529,7 +529,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBHUSIS.T
+!#IMPORT ..\LIB\LIBHUSIS.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -597,7 +597,7 @@ husis_int_restore(old_seg_ptr, int)
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HELLO3\MAIN.T
+!#IMPORT HELLO3\MAIN.T
 
 
 do

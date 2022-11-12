@@ -16,7 +16,7 @@
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/BASE.T
+!#IMPORT HUSIS/BASE.T
 ! HUSIS - Modular Kernel
 ! Humberto Costa dos Santos Junior, 2022
 ! 3-Clause BSD license
@@ -65,7 +65,7 @@ const MODE_DOS_APP = 2;  ! Running as DOS App
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/STRINGS.T
+!#IMPORT HUSIS/STRINGS.T
 
 ! ==========================================================================
 ! String/Character
@@ -193,7 +193,7 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/IO.T
+!#IMPORT HUSIS/IO.T
 
 
 ! ==========================================================================
@@ -468,7 +468,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/TERM.T
+!#IMPORT HUSIS/TERM.T
 ! ==========================================================================
 ! Terminal I/O
 ! ==========================================================================
@@ -578,7 +578,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/MEM.T
+!#IMPORT HUSIS/MEM.T
 ! ==========================================================================
 ! Memory Manager
 ! ==========================================================================
@@ -747,7 +747,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/DISK.T
+!#IMPORT HUSIS/DISK.T
 ! ==========================================================================
 ! BIOS Disk I/O using Stream API
 ! ==========================================================================
@@ -898,7 +898,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/FS.T
+!#IMPORT HUSIS/FS.T
 ! ==========================================================================
 ! File System Infrastructure
 ! ==========================================================================
@@ -1255,7 +1255,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/MINIXFS.T
+!#IMPORT HUSIS/MINIXFS.T
 ! ==========================================================================
 ! Minix File System
 ! ==========================================================================
@@ -1874,7 +1874,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/PROCESS.T
+!#IMPORT HUSIS/PROCESS.T
 ! ==========================================================================
 ! Process Management
 ! ==========================================================================
@@ -2037,7 +2037,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/EXEC.T
+!#IMPORT HUSIS/EXEC.T
 ! ==========================================================================
 ! COM File Support
 ! ==========================================================================
@@ -2149,7 +2149,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/INT79.T
+!#IMPORT HUSIS/INT79.T
 ! ==========================================================================
 ! Interrupt Handlers
 ! ==========================================================================
@@ -2527,7 +2527,7 @@ end
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT HUSIS/MAIN.T
+!#IMPORT HUSIS/MAIN.T
 
 ! ==========================================================================
 ! Main

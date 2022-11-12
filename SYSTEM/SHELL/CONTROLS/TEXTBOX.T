@@ -1,12 +1,12 @@
 ! ==========================================================================
-! Label UIType
+! TextBox UIType
 ! ==========================================================================
 
-label_render(control) far do
+textbox_render(control) far do
     var tmp::20;
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]);
-    term_color_fore(t.fargetw(t.local(), @ThemeText));
-    term_color_back(t.fargetw(t.local(), @ThemeControl));
+    term_color_fore(t.fargetw(t.local(), @ThemeEditorText));
+    term_color_back(t.fargetw(t.local(), @ThemeEditorBack));
     ie(control[CONTROL_CONTENT_PTR] = 0) do
         term_write_char('\e');
         term_write_char('r');
@@ -27,25 +27,27 @@ label_render(control) far do
             term_write(control[CONTROL_CONTENT_PTR], control[CONTROL_CALC_WIDTH]);
         end
     end
+    if(control[TEXTBOX_CURSOR_X] >= control[CONTROL_CALC_WIDTH]) control[TEXTBOX_CURSOR_X] := control[CONTROL_CALC_WIDTH];
+    term_change_color(control[CONTROL_CALC_X] + control[TEXTBOX_CURSOR_X], control[CONTROL_CALC_Y], t.fargetw(t.local(), @ThemeEditorText), t.fargetw(t.local(), @ThemeEditorBack));
 end
 
-label_focus(control, focus) far do
+textbox_focus(control, focus) far do
 end
 
-label_keyboard(control, press, ascii, scancode) far do
+textbox_keyboard(control, press, ascii, scancode) far do
 end
 
-label_mouse(control, primary_click, secondary_click, scroll) far do
+textbox_mouse(control, primary_click, secondary_click, scroll) far do
 end
 
-label_new(uitype) do
+textbox_new(uitype) do
     interface_new_uitype
     (
         uitype, 
         t.local(), 
-        @label_render,
-        @label_focus,
-        @label_keyboard,
-        @label_mouse
+        @textbox_render,
+        @textbox_focus,
+        @textbox_keyboard,
+        @textbox_mouse
     );
 end

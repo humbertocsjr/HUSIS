@@ -43,6 +43,7 @@ img_copy:
 	@minixfs add IMG.IMG SYSTEM/APPMAN.COM /System/AppMan.com
 	@minixfs add IMG.IMG BIN/T.COM /Programs/T.com
 	@minixfs add IMG.IMG BIN/S86.COM /Programs/S86.com
+	@minixfs add IMG.IMG BIN/PRJ.COM /Programs/PRJ.com
 	@minixfs add IMG.IMG BIN/OSASMCOM.COM /Programs/OSAsmCOM.com
 	@minixfs add IMG.IMG BIN/OSASMSYS.COM /Programs/OSAsmSYS.com
 	@minixfs add IMG.IMG BIN/OSASMPRG.COM /Programs/OSAsmPRG.com
@@ -57,4 +58,4 @@ debug: all img
 
 testdos: all img
 	@echo -= Start emulation [DOSBox] =-
-	@dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "C:\HUSIS 000 80 2 18 /System/Shell.com"  > /dev/null
+	@dosbox -C "mount c: ./" -C "imgmount 0 -size 512,18,2,80 -fs none -t floppy 1440.IMG" -C "C:\HUSIS 000 80 2 18 /System/Autoexec.hsh"  > /dev/null

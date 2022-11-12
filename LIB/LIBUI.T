@@ -62,7 +62,11 @@ struct OBJ_CONTROL =
     CONTROL_CALC_Y,
     CONTROL_CALC_WIDTH,
     CONTROL_CALC_HEIGHT;
-    
+
+const TEXTBOX_CURSOR_X = CONTROL_VALUE_1;
+const TEXTBOX_POSITION = CONTROL_VALUE_2;
+const TEXTBOX_LEN = CONTROL_VALUE_3;
+
 struct OBJ_UITYPE = 
     UITYPE_SEG,
     UITYPE_RENDER_PTR,
@@ -72,3 +76,4 @@ struct OBJ_UITYPE =
 
 uitype_window(uitype) t.int86ax(0x81, 400,uitype,0,0, 0,0);
 uitype_label(uitype) t.int86ax(0x81, 401,uitype,0,0, 0,0);
+uitype_textbox(uitype) t.int86ax(0x81, 402,uitype,0,0, 0,0);

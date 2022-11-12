@@ -16,7 +16,7 @@
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBBASE.T
+!#IMPORT ..\LIB\LIBBASE.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -46,7 +46,7 @@ struct COLORS = BLACK, DARK_BLUE, DARK_GREEN, DARK_CYAN, DARK_RED,
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBUI.T
+!#IMPORT ..\LIB\LIBUI.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -111,7 +111,11 @@ struct OBJ_CONTROL =
     CONTROL_CALC_Y,
     CONTROL_CALC_WIDTH,
     CONTROL_CALC_HEIGHT;
-    
+
+const TEXTBOX_CURSOR_X = CONTROL_VALUE_1;
+const TEXTBOX_POSITION = CONTROL_VALUE_2;
+const TEXTBOX_LEN = CONTROL_VALUE_3;
+
 struct OBJ_UITYPE = 
     UITYPE_SEG,
     UITYPE_RENDER_PTR,
@@ -121,6 +125,7 @@ struct OBJ_UITYPE =
 
 uitype_window(uitype) t.int86ax(0x81, 400,uitype,0,0, 0,0);
 uitype_label(uitype) t.int86ax(0x81, 401,uitype,0,0, 0,0);
+uitype_textbox(uitype) t.int86ax(0x81, 402,uitype,0,0, 0,0);
 
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
@@ -139,7 +144,7 @@ uitype_label(uitype) t.int86ax(0x81, 401,uitype,0,0, 0,0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBSTR.T
+!#IMPORT ..\LIB\LIBSTR.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -378,7 +383,7 @@ rstr_to_num(seg, str) return rstr_to_num2(seg, str, 0);
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT ..\LIB\LIBFONT.T
+!#IMPORT ..\LIB\LIBFONT.T
 ! HUSIS Library
 ! Humberto Costa dos Santos Junior, 2022
 ! License: 0BSD or Public Domain
@@ -454,26 +459,103 @@ const FONT_SEARCH = 31;
 ! DONT EDIT THIS FILE
 ! DONT EDIT THIS FILE
 
-! IMPORT APPMAN\MAIN.T
+!#IMPORT ..\LIB\LIBHUSIS.T
+! HUSIS Library
+! Humberto Costa dos Santos Junior, 2022
+! License: 0BSD or Public Domain
+
+! ==========================================================================
+! Memory Management
+! ==========================================================================
+
+mem_calc_free_kib() return t.int86ax(0x79, 400,0,0,0, 0,0);
+mem_calc_free() return t.int86ax(0x79, 401,0,0,0, 0,0);
+mem_size(segment) return t.int86ax(0x79, 402,segment,0,0, 0,0);
+
+! ==========================================================================
+! Kernel I/O
+! ==========================================================================
+
+kernel_print(str) t.int86ax(0x79, 101,str,0,0, 0,0);
+kernel_println(str) t.int86ax(0x79, 102,str,0,0, 0,0);
+kernel_printenter() t.int86ax(0x79, 105,0,0,0, 0,0);
+kernel_printnum(str) t.int86ax(0x79, 103,str,0,0, 0,0);
+kernel_printfixed(str, len) t.int86ax(0x79, 100,str,len,0, 0,0);
+kernel_printchar(char) t.int86ax(0x79, 106,char,0,0, 0,0);
+
+
+! ==========================================================================
+! Process info
+! ==========================================================================
+
+husis_get_version() return t.int86ax(0x79, 5,0,0,0, 0,0);
+husis_get_sub_version() return t.int86ax(0x79, 6,0,0,0, 0,0);
+husis_get_revision() return t.int86ax(0x79, 7,0,0,0, 0,0);
+husis_process_id() return t.int86ax(0x79, 302,0,0,0, 0,0);
+husis_parent_id() return t.int86ax(0x79, 309,0,0,0, 0,0);
+husis_other_parent_id(id) return t.int86ax(0x79, 308,id,0,0, 0,0);
+husis_other_seg(id) return t.int86ax(0x79, 304,id,0,0, 0,0);
+husis_other_ip(id) return t.int86ax(0x79, 305,id,0,0, 0,0);
+husis_other_sp(id) return t.int86ax(0x79, 306,id,0,0, 0,0);
+husis_other_bp(id) return t.int86ax(0x79, 307,id,0,0, 0,0);
+husis_other_status(id) return t.int86ax(0x79, 303,id,0,0, 0,0);
+husis_exit(status) return t.int86ax(0x79, 0,status,0,0, 0,0);
+husis_exit_main() return t.int86ax(0x79, 2,0,0,0, 0,0);
+husis_shutdown() return t.int86ax(0x79, 1,0,0,0, 0,0);
+husis_exec_com(file_name, args) return t.int86ax(0x79, 300,file_name,args,0, 0,0);
+husis_exec_prg(file_name, args) return t.int86ax(0x79, 301,file_name,args,0, 0,0);
+husis_int_set(old_seg_ptr, int, function) 
+    return t.int86ax(0x79, 3,old_seg_ptr,t.local(),int, function,0);
+husis_int_restore(old_seg_ptr, int) 
+    return t.int86ax(0x79, 4,old_seg_ptr,int,0, 0,0);
+
+
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+! DONT EDIT THIS FILE
+
+!#IMPORT APPMAN\MAIN.T
 ! Application Manager
 ! Humberto Costa dos Santos Junior, 2022
 ! 3-Clause BSD license
 ! Cooperative multitask manager
 
-var WindowType[OBJ_UITYPE], LabelType[OBJ_UITYPE];
+var WindowType[OBJ_UITYPE], 
+    LabelType[OBJ_UITYPE],
+    TextBoxType[OBJ_UITYPE];
 
 var MainWindow[OBJ_CONTROL],
-    CounterLabel[OBJ_CONTROL];
+    CounterLabel[OBJ_CONTROL],
+    CounterTxt::30,
+    VersionLabel[OBJ_CONTROL],
+    VersionTxt::30,
+    TestTextBox[OBJ_CONTROL],
+    TestTxt::30;
+
 
 initialize_types() do
     ! Import control types
     uitype_window(WindowType);
     uitype_label(LabelType);
+    uitype_textbox(TextBoxType);
 end
 
 
 do
-    var i, counter_txt::30, number::11;
+    var i, number::11;
 
     ! Import and initialize types
     initialize_types();
@@ -485,7 +567,7 @@ do
     ui_new(MainWindow, WindowType);
     MainWindow[CONTROL_X] := 5;
     MainWindow[CONTROL_Y] := 5;
-    MainWindow[CONTROL_WIDTH] := 20;
+    MainWindow[CONTROL_WIDTH] := 35;
     MainWindow[CONTROL_HEIGHT] := 10;
     MainWindow[CONTROL_CONTENT_PTR] := "Window Test"; ! Content = Title
 
@@ -498,19 +580,52 @@ do
     CounterLabel[CONTROL_Y] := 4;
     CounterLabel[CONTROL_WIDTH] := 20;
     CounterLabel[CONTROL_HEIGHT] := 1;
-    str_copy(counter_txt, "Test");
-    CounterLabel[CONTROL_CONTENT_PTR] := counter_txt; ! Content = Text
+    str_copy(CounterTxt, "Test");
+    CounterLabel[CONTROL_CONTENT_PTR] := CounterTxt; ! Content = Text
 
     ! Attach label to window
     ui_attach(CounterLabel, MainWindow);
+
+    ! Create Label
+    ui_new(VersionLabel, LabelType);
+    VersionLabel[CONTROL_X] := 2;
+    VersionLabel[CONTROL_Y] := 3;
+    VersionLabel[CONTROL_WIDTH] := 20;
+    VersionLabel[CONTROL_HEIGHT] := 1;
+    str_copy(VersionTxt, "HUSIS v");
+    str_from_num_fixed(number, 4, husis_get_version());
+    str_concat(VersionTxt, number);
+    str_concat(VersionTxt, ".");
+    str_from_num_fixed(number, 2, husis_get_sub_version());
+    str_concat(VersionTxt, number);
+    str_concat(VersionTxt, " R");
+    str_from_num_fixed(number, 2, husis_get_revision());
+    str_concat(VersionTxt, number);
+    VersionLabel[CONTROL_CONTENT_PTR] := VersionTxt; ! Content = Text
+
+    ! Attach label to window
+    ui_attach(VersionLabel, MainWindow);
+
+    ! Create textbox
+    ui_new(TestTextBox, TextBoxType);
+    TestTextBox[CONTROL_X] := 2;
+    TestTextBox[CONTROL_Y] := 6;
+    TestTextBox[CONTROL_WIDTH] := 20;
+    TestTextBox[CONTROL_HEIGHT] := 1;
+    str_copy(TestTxt, "ABX");
+    TestTextBox[CONTROL_CONTENT_PTR] := TestTxt; ! Content = Text
+    TestTextBox[TEXTBOX_LEN] := 30;
+
+    ! Attach textbox to window
+    ui_attach(TestTextBox, MainWindow);
 
     ! Show Main Window
     ui_show(MainWindow);
     while(TRUE) do
         ! Update Counter
-        str_copy(counter_txt, "Counter: ");
+        str_copy(CounterTxt, "Counter: ");
         str_from_num_fixed(number, 6, i);
-        str_concat(counter_txt, number);
+        str_concat(CounterTxt, number);
         ! Render counter
         ui_render(CounterLabel);
         i := i + 1;

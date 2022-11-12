@@ -11,13 +11,21 @@ window_render(control) far do
 
     term_write_char('\e');
     term_write_char('r');
-    str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH]);
+    str_from_num_fixed(tmp, 2, control[CONTROL_CALC_WIDTH] - 1);
     term_writes(tmp);
     term_write_char(FONT_HORIZONTAL_LINES);
+    term_write_char_force(FONT_FRAME_LEFT);
 
-    term_calc_pos(control[CONTROL_CALC_X] + 4, control[CONTROL_CALC_Y]);
-    if(control[CONTROL_CONTENT_PTR] \= 0)
-        term_write(control[CONTROL_CONTENT_PTR], (str_len(control[CONTROL_CONTENT_PTR]) + 5) >= control[CONTROL_WIDTH] ->  (control[CONTROL_WIDTH] - 5) : str_len(control[CONTROL_CONTENT_PTR]));
+    if(control[CONTROL_CONTENT_PTR] \= 0) do
+        ie((str_len(control[CONTROL_CONTENT_PTR]) + 6) >= control[CONTROL_CALC_WIDTH]) do
+            term_calc_pos(control[CONTROL_CALC_X] + 5, control[CONTROL_CALC_Y]);
+            term_write(control[CONTROL_CONTENT_PTR], (control[CONTROL_CALC_WIDTH] - 6));
+        end
+        else do
+            term_calc_pos(control[CONTROL_CALC_X] + ((control[CONTROL_CALC_WIDTH] - str_len(control[CONTROL_CONTENT_PTR])) >> 1), control[CONTROL_CALC_Y]);
+            term_write(control[CONTROL_CONTENT_PTR], str_len(control[CONTROL_CONTENT_PTR]));
+        end
+    end
 
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]);
     term_color_fore(t.fargetw(t.local(), @ThemeWindowClose));
@@ -32,6 +40,9 @@ window_render(control) far do
     else
         term_color_fore(t.fargetw(t.local(), @ThemeWindowButtonDisable));
     term_write_char_force(FONT_MAXIMIZE);
+
+    term_color_fore(t.fargetw(t.local(), @ThemeWindowTitleText));
+    term_write_char_force(FONT_FRAME_RIGHT);
 
     term_calc_pos(control[CONTROL_CALC_X], control[CONTROL_CALC_Y]+1);
 

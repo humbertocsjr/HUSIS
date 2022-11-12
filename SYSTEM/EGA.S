@@ -197,6 +197,9 @@ video_set_font8x8: | __ega7
     mov cx, #0x2020
     xor dx, dx
     int #0x10
+    mov ax, #0x1003
+    xor bx,bx
+    int #0x10
     pop bp
     mov ax, #TRUE
     ret
@@ -214,6 +217,9 @@ video_initialize: | __ega8
     xor bx,bx
     mov cx, #0x2020
     xor dx, dx
+    int #0x10
+    mov ax, #0x1003
+    xor bx,bx
     int #0x10
     ret
 

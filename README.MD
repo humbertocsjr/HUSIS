@@ -4,6 +4,12 @@ HUSIS is a text-based operating system for 8086/8088 CPUs, with custom EGA/VGA f
 
 This Operating System will implement minimum DOS INT 0x21 function set to run [T3X/86 with Low Level Extensions](https://github.com/humbertocsjr/T3X86LL) and [T3X/86](https://t3x.org/t3x) Applications without modifications.
 
+Recommended code editor: VS Code (with t3x extension added)
+
+## Project files (*.PRJ)
+
+This files contains filenames imported to unified T3X file used to build.
+
 ## Current Roadmap Topics
 
 - Full customizable font
@@ -24,6 +30,16 @@ This Operating System will implement minimum DOS INT 0x21 function set to run [T
 [Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.5.0-alpha)
 
 ![alt first version](SCREENS/V0_5_0.PNG)
+
+## Boot Order
+
+- Bootloader  - /BOOT/*
+- Load HUSIS Kernel - /HUSIS/*
+- Load Common Kernel Extensions - /SYSTEM/*
+- Load Video Controller Kernel Extension - /SYSTEM/EGA.*
+- Load Shell (User interface/Font Manager) - /SYSTEM/SHELL/*
+- Load Application Manager (Event manager) - /SYSTEM/APPMAN/*
+- Load File Manager (Main user application) - /SYSTEM/FILEMAN/*
 
 ## Terminal Implementation
 
@@ -48,10 +64,18 @@ The DOS Application mode preserves DOS Structures, and limit the RAM usage to ar
 
 #### DOS App mode
 
-This mode is created for Debug use and running on machines with ROM DOS, like HP Palmtop PC 95LX/100LX/200LX.
+This mode is created for Debug use and running on machines with ROM DOS, need Minix File System in separated disk.
 
 
-Run 'HUSIS.COM'
+Run 'HUSIS.COM 0 80 2 18 /System/Autoexec.hsh'
+
+Command arguments:
+
+- Disk number: 0 = A:, 1 = B:, 128 = C:, 129 = D:
+- Cilinders
+- Heads
+- Sectors
+- Autoexec file path
 
 ## Build Requirements
 

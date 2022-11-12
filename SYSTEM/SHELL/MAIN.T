@@ -64,13 +64,15 @@ do
     ThemeText := BLACK;
     ThemeWindowBorder := BLACK;
     ThemeWindowTitleBack := BLACK;
-    ThemeWindowTitleText := WHITE;
+    ThemeWindowTitleText := LIGHT_GRAY;
     ThemeScreenBack := DARK_CYAN;
     ThemeScreenText := BLACK;
     ThemeWindowClose := LIGHT_RED;
     ThemeWindowMinimize := LIGHT_YELLOW;
     ThemeWindowMaximize := LIGHT_GREEN;
     ThemeWindowButtonDisable := LIGHT_GRAY;
+    ThemeEditorBack := WHITE;
+    ThemeEditorText := BLACK;
     ! Initialize Terminal
     term_init();
     term_cls();

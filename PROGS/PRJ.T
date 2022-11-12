@@ -98,7 +98,7 @@ do
             t.write(file_out, "! DONT EDIT THIS FILE\n", 22);
             t.write(file_out, "! DONT EDIT THIS FILE\n", 22);
             t.write(file_out, "! DONT EDIT THIS FILE\n", 22);
-            t.write(file_out, "\n! IMPORT ", 10);
+            t.write(file_out, "\n!#IMPORT ", 10);
             t.write(file_out, name_import, str_len(name_import));
             t.write(file_out, "\n", 1);
             file_import := t.open(name_import, T3X.OREAD);

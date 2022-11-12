@@ -40,6 +40,60 @@ term_calc_pos(x, y) do
     t.farsetw(t.local(), @TermPtr, (y * 80 + x) << 1);
 end
 
+term_change_color(x, y, foreground, background) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    t.farsetb(
+            t.fargetw(t.local(), @TermSeg), 
+            ((y * 80 + x) << 1) + 1, 
+            (background << 4) | (foreground));
+end
+
+term_change_char(x, y, c) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    t.farsetb(
+            t.fargetw(t.local(), @TermSeg), 
+            ((y * 80 + x) << 1), 
+            c);
+end
+
+term_get_char(x, y) do
+! Calculate new position
+    var max_y, max_x, total_x;
+    max_x := t.fargetw(t.local(), @TermWidth);
+    max_y := t.fargetw(t.local(), @TermHeight);
+    if((x >= max_x)|(y >= max_y))do
+        while(x >= max_x) do
+            x := x - max_x;
+            y := y + 1;
+        end
+        if(y > max_y) y := 0;
+    end
+    return t.fargetb(
+                    t.fargetw(t.local(), @TermSeg), 
+                    ((y * 80 + x) << 1)
+                    );
+end
+
 term_get_height() return t.fargetw(t.local(), @TermHeight);
 term_get_width() return t.fargetw(t.local(), @TermWidth);
 

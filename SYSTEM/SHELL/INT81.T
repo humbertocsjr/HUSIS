@@ -164,6 +164,9 @@ int81(ax,bx,cx,dx,ds,si,es,di,ss,sp) farint do
         else ie (ax = 401) do ! New Label Type
             label_new(bx);
         end
+        else ie (ax = 402) do ! New TextBox Type
+            textbox_new(bx);
+        end
         else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
     end
     else int_debug(0x79, ax,bx,cx,dx,ds,si,es,di);
