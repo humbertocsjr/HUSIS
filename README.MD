@@ -10,6 +10,14 @@ Recommended code editor: VS Code (with t3x extension added)
 
 This files contains filenames imported to unified T3X file used to build.
 
+## EGA/VGA Fonts
+
+HUSIS uses EGA/VGA 8x8 fonts, with 128 fixed chars (including CP850-like latin chars, upper case only), and 128 custom chars per application.
+
+The app can read any custom font files into 128 avail chars, including UTF-8(pending) extensions and lower case versions(pending).
+
+Font file format is 100% ascii file, optimize to easy user manipulation and edition. 
+
 ## Current Roadmap Topics
 
 - Full customizable font
