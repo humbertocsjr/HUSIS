@@ -31,6 +31,7 @@ license:
 
 
 int20:
+| TODO: Call Shell to refresh screen with desktop (Exit from DOS app)
     xor bx,bx
     movb bl, al
     mov ax, #2
@@ -52,6 +53,7 @@ int32_4c:
     jmp exit
 
 write:
+| TODO: Clear screen on first sysout/syserr write from one app
     cmp bx, #1
     je write_sysout
     cmp bx, #2
@@ -81,6 +83,7 @@ read:
         int #0x81
         iret
 
+| TODO: Call Shell to refresh screen with desktop (Exit from DOS app)
 exit:
     xor bx, bx
     movb bl, al

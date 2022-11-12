@@ -11,7 +11,7 @@
 
 const VERSION = 2022;
 const SUB_VERSION = 11;
-const REVISION = 0;
+const REVISION = 1;
 
 const TRUE = %1;
 const FALSE = 0;
