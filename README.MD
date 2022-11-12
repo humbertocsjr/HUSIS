@@ -25,11 +25,17 @@ This files contains filenames imported to unified T3X file used to build.
 
 ## Changes in current release
 
-- Shell commands prototype
+- Shell Replacement
+- User Interface prototype
+- Font Manager
+- Initial Bold Font
+- Splash screen
 
-[Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.5.0-alpha)
+[Download Floppy Images](https://github.com/humbertocsjr/HUSIS/releases/tag/v2022.11r0-alpha)
 
-![alt first version](SCREENS/V0_5_0.PNG)
+![alt first version](SCREENS/V22_11_0_LOADING.PNG)
+
+![alt first version](SCREENS/V22_11_0.PNG)
 
 ## Boot Order
 
@@ -231,3 +237,16 @@ HUSIS v0.5 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v0.
 - Shell commands prototype
 
 ![alt first version](SCREENS/V0_5_0.PNG)
+
+
+HUSIS v2022.11 R0: [Download](https://github.com/humbertocsjr/HUSIS/releases/tag/v2022.11r0-alpha)
+
+- Shell Replacement
+- User Interface prototype
+- Font Manager
+- Initial Bold Font
+- Splash screen
+
+![alt first version](SCREENS/V22_11_0_LOADING.PNG)
+
+![alt first version](SCREENS/V22_11_0.PNG)
